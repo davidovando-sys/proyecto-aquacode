@@ -1,0 +1,22 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}Nuevo administrador | Panel AquaCivis{% endblock %}
+{% block admin_title %}Nuevo administrador{% endblock %}
+{% block admin_subtitle %}Crea una cuenta con acceso al panel de administración.{% endblock %}
+
+{% block admin_content %}
+<form method="post" class="admin-form">{% csrf_token %}
+    {% if formulario.non_field_errors %}<div class="alert alert-danger">{{ formulario.non_field_errors }}</div>{% endif %}
+    <section class="admin-card form-section">
+        <div class="form-grid">
+            {% for campo in formulario %}
+            <div class="form-field"><label for="{{ campo.id_for_label }}">{{ campo.label }}</label>{% if campo.name == 'comuna' %}{% include 'partials/comuna_busqueda.html' with campo_id='id_comuna' campo_nombre='comuna' requerido=True valor=campo.value %}{% else %}{{ campo }}{% endif %}{{ campo.errors }}</div>
+            {% endfor %}
+        </div>
+    </section>
+    <div class="admin-form-footer">
+        <a href="{% url 'dashboard_admin' %}" class="btn btn-secondary">Cancelar</a>
+        <button class="btn btn-admin-primary" type="submit"><i class="bi bi-shield-check"></i> Crear administrador</button>
+    </div>
+</form>
+{% endblock %}

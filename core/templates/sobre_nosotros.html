@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sobre Nosotros - AquaCivis{% endblock %}
+
+{% block content %}
+<section class="about-hero" aria-labelledby="about-title">
+    <div class="container">
+        <img class="about-logo" src="{% static 'img/logo.png' %}" alt="AquaCivis: monitorea, comparte y protege">
+        <h1 id="about-title">Sobre AquaCivis</h1>
+        <p class="about-tagline">Monitorea · Comparte · Protege</p>
+        <p class="about-copy">
+            Somos una plataforma ciudadana de monitoreo de la calidad del agua potable, construida para y por la comunidad chilena bajo la norma NCh409/1.
+        </p>
+    </div>
+</section>
+
+<section class="container about-cards" aria-label="Propósito de AquaCivis">
+    <div class="row g-4 justify-content-center">
+        <div class="col-12 col-md-6 col-lg-4">
+            <article class="about-card">
+                <span class="about-icon"><i class="bi bi-bullseye" aria-hidden="true"></i></span>
+                <h2>Misión</h2>
+                <p>{{ contenido_web.descripcion_mision }}</p>
+            </article>
+        </div>
+        <div class="col-12 col-md-6 col-lg-4">
+            <article class="about-card">
+                <span class="about-icon about-icon-vision" aria-hidden="true">🔭</span>
+                <h2>Visión</h2>
+                <p>Un Chile donde cada ciudadano pueda verificar en tiempo real la calidad del agua que consume en su comuna.</p>
+            </article>
+        </div>
+        <div class="col-12 col-md-6 col-lg-4">
+            <article class="about-card">
+                <span class="about-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+                <h2>Trabajo comunitario</h2>
+                <p>Una red de personas voluntarias de distintas comunas que comparte mediciones y alertas para proteger la salud colectiva.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="container" id="registro" aria-labelledby="join-title">
+    <div class="join-card">
+        <h2 id="join-title">¿Quieres ser parte de AquaCivis?</h2>
+        <p>Únete a nuestra red de monitores ciudadanos y contribuye a proteger el agua potable de Chile.</p>
+        {% if user.is_authenticated %}
+        {% else %}
+
+        <a href="{% url 'solicitar_registro' %}" class="btn btn-aquacivis rounded-pill px-4 py-2">Registrarse gratis</a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

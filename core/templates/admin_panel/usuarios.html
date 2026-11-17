@@ -1,0 +1,447 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load paginacion_tags %}
+{% block title %}Usuarios | Panel AquaCivis{% endblock %}
+{% block admin_title %}Gestión de usuarios{% endblock %}
+{% block admin_subtitle %}Revisa solicitudes, cuentas aprobadas y su actividad en la plataforma.{% endblock %}
+{% block admin_actions %}
+<a href="{% url 'crear_admin' %}" class="btn btn-admin-primary"><i class="bi bi-shield-check"></i> Nuevo administrador</a>
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="admin-stats admin-stats--wide">
+    <article class="admin-stat-filter{% if estado_seleccionado == 'todos' %} is-selected{% endif %}"><a class="admin-stat-link" href="?estado=todos&buscar={{ buscar|urlencode }}&orden={{ orden|urlencode }}" {% if estado_seleccionado == 'todos' %}aria-current="true"{% endif %}><span class="visually-hidden">Filtrar: todos</span></a><span><i class="bi bi-people"></i></span><div><strong>{{ total_usuarios }}</strong><small>Usuarios totales</small></div></article>
+    <article class="admin-stat-filter{% if estado_seleccionado == 'activos' %} is-selected{% endif %}"><a class="admin-stat-link" href="?estado=activos&buscar={{ buscar|urlencode }}&orden={{ orden|urlencode }}" {% if estado_seleccionado == 'activos' %}aria-current="true"{% endif %}><span class="visually-hidden">Filtrar: activos</span></a><span class="success"><i class="bi bi-person-check"></i></span><div><strong>{{ total_activos }}</strong><small>Usuarios activos</small></div></article>
+    <article class="admin-stat-filter{% if estado_seleccionado == 'bloqueados' %} is-selected{% endif %}"><a class="admin-stat-link" href="?estado=bloqueados&buscar={{ buscar|urlencode }}&orden={{ orden|urlencode }}" {% if estado_seleccionado == 'bloqueados' %}aria-current="true"{% endif %}><span class="visually-hidden">Filtrar: bloqueados</span></a><span class="danger"><i class="bi bi-lock"></i></span><div><strong>{{ total_bloqueados }}</strong><small>Usuarios bloqueados</small></div></article>
+    <article class="admin-stat-filter{% if estado_seleccionado == 'pendientes' %} is-selected{% endif %}"><a class="admin-stat-link" href="?estado=pendientes&buscar={{ buscar|urlencode }}&orden={{ orden|urlencode }}" {% if estado_seleccionado == 'pendientes' %}aria-current="true"{% endif %}><span class="visually-hidden">Filtrar: pendientes</span></a><span class="warning"><i class="bi bi-hourglass-split"></i></span><div><strong>{{ total_pendientes }}</strong><small>Solicitudes pendientes</small></div></article>
+</div>
+
+
+<div class="admin-card-head">
+    <div>
+        <h2>{{ titulo_listado }}</h2>
+        <p>Las acciones sensibles requieren confirmación.</p>
+    </div>
+</div>
+
+<!-- Buscador y ordenamiento -->
+
+
+<form method="get" id="formFiltrosUsuarios" class="admin-user-filters mb-3">
+
+    <input type="hidden" name="estado"
+           value="{{ estado_seleccionado }}">
+
+    <!-- Botón visible solamente en celulares-->
+    <button
+        type="button"
+        class="btn btn-outline-primary w-100 d-md-none admin-filter-toggle"
+        data-bs-toggle="collapse"
+        data-bs-target="#panelFiltrosUsuarios"
+        aria-expanded="false"
+        aria-controls="panelFiltrosUsuarios">
+
+        <i class="bi bi-search"></i>
+        Buscar y filtrar
+        <i class="bi bi-chevron-down ms-auto"></i>
+    </button>
+
+    <!-- Panel de filtros -->
+    <div class="collapse d-md-block" id="panelFiltrosUsuarios">
+
+        <div class="row g-2 align-items-end">
+
+            <div class="col-md-7">
+                <label for="buscarUsuario" class="form-label">
+                    Buscar usuario
+                </label>
+
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+
+                    <input
+                        type="search"
+                        class="form-control"
+                        id="buscarUsuario"
+                        name="buscar"
+                        value="{{ buscar }}"
+                        placeholder="Nombre, correo o comuna..."
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <label for="ordenUsuarios" class="form-label">
+                    Ordenar por
+                </label>
+
+                <select class="form-select"
+                        id="ordenUsuarios"
+                        name="orden">
+
+                    <option value="recientes" {% if orden == 'recientes' %}selected{% endif %}>Más recientes</option>
+                    <option value="antiguos" {% if orden == 'antiguos' %}selected{% endif %}>Más antiguos</option>
+                    <option value="nombre_asc" {% if orden == 'nombre_asc' %}selected{% endif %}>Nombre (A-Z)</option>
+                    <option value="nombre_desc" {% if orden == 'nombre_desc' %}selected{% endif %}>Nombre (Z-A)</option>
+                    <option value="correo_asc" {% if orden == 'correo_asc' %}selected{% endif %}>Correo (A-Z)</option>
+                    <option value="correo_desc" {% if orden == 'correo_desc' %}selected{% endif %}>Correo (Z-A)</option>
+                    <option value="comuna_asc" {% if orden == 'comuna_asc' %}selected{% endif %}>Comuna (A-Z)</option>
+                    <option value="comuna_desc" {% if orden == 'comuna_desc' %}selected{% endif %}>Comuna (Z-A)</option>
+
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <a href="?estado={{ estado_seleccionado }}"
+                   class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    Limpiar
+                </a>
+            </div>
+
+        </div>
+    </div>
+</form>
+
+
+    <div class="table-responsive">
+        <table class="table admin-table align-middle mb-0">
+            <thead><tr><th>Nombre</th><th>Correo</th><th>Comuna</th><th>Mediciones</th><th>Rol</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+            <tbody>
+            {% for fila in filas %}
+    {% if fila.solicitud.aprobado and fila.usuario %}
+        <tr class="usuario-row"
+            data-url="{% url 'ver_usuario' fila.solicitud.id %}?origen=usuarios"
+            tabindex="0"
+            role="link"
+            aria-label="Ver detalles de {{ fila.solicitud.nombre }}">
+    {% else %}
+        <tr>
+    {% endif %}
+
+        <!-- Nombre -->
+        <td>
+            <strong>{{ fila.solicitud.nombre }}</strong>
+            <small class="d-block">
+                Desde {{ fila.solicitud.fecha_creacion|date:'d/m/Y' }}
+            </small>
+        </td>
+
+        <!-- Correo -->
+        <td>{{ fila.solicitud.email }}</td>
+
+        <!-- Comuna -->
+        <td>{{ fila.solicitud.comuna }}</td>
+
+        <!-- Mediciones -->
+        <td class="text-center">
+            <span class="metric-number">{{ fila.mediciones }}</span>
+        </td>
+
+        <!-- Rol -->
+        <td>
+            {% if fila.usuario and fila.usuario.is_staff %}
+                <span class="status-pill info">Administrador</span>
+            {% elif fila.usuario %}
+                <span class="status-pill neutral">Monitor</span>
+            {% else %}
+                <span class="text-secondary">Sin cuenta</span>
+            {% endif %}
+        </td>
+
+        <!-- Estado -->
+        <td>
+            {% if fila.solicitud.bloqueado %}
+                <span class="status-pill danger">Bloqueado</span>
+            {% elif fila.usuario and not fila.usuario.is_active and fila.solicitud.aprobado %}
+                <span class="status-pill danger">Inactivo</span>
+            {% elif fila.solicitud.aprobado %}
+                <span class="status-pill success">Activo</span>
+            {% else %}
+                <span class="status-pill warning">Pendiente</span>
+            {% endif %}
+        </td>
+
+        <!-- Acciones -->
+        <td>
+            <div class="admin-row-actions">
+
+                <button type="button" class="btn btn-sm btn-outline-info"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalMotivo"
+                        data-nombre="{{ fila.solicitud.nombre }}"
+                        data-motivo="{{ fila.solicitud.motivo|default:'' }}"
+                        title="Ver motivo de registro"
+                        aria-label="Ver motivo de registro">
+                    <i class="bi bi-chat-left-text"></i>
+                </button>
+
+                {% if not fila.solicitud.aprobado %}
+                    <form method="post" action="{% url 'aprobar_solicitud' fila.solicitud.id %}">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-success" type="submit">
+                            <i class="bi bi-check-lg"></i> Aprobar
+                        </button>
+                    </form>
+
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalRechazo"
+                            data-action="{% url 'rechazar_solicitud' fila.solicitud.id %}"
+                            data-nombre="{{ fila.solicitud.nombre }}">
+                        <i class="bi bi-x-lg"></i> Rechazar
+                    </button>
+                {% endif %}
+
+                {% if fila.solicitud.aprobado and fila.usuario %}
+                    {% if fila.solicitud.bloqueado %}
+                        <form method="post" action="{% url 'desbloquear_usuario' fila.solicitud.id %}">
+                            {% csrf_token %}
+                            <button class="btn btn-sm btn-outline-success"
+                                    type="submit" title="Desbloquear">
+                                <i class="bi bi-unlock"></i>
+                            </button>
+                        </form>
+                    {% else %}
+                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalBloqueo"
+                                data-action="{% url 'bloquear_usuario' fila.solicitud.id %}"
+                                data-nombre="{{ fila.solicitud.nombre }}"
+                                title="Bloquear">
+                            <i class="bi bi-lock"></i>
+                        </button>
+                    {% endif %}
+                {% endif %}
+
+            </div>
+        </td>
+    </tr>
+
+{% empty %}
+    <tr>
+        <td colspan="7">
+            <div class="admin-empty">
+                <i class="bi bi-people"></i>
+                <strong>No hay resultados</strong>
+                <span>No hay usuarios o solicitudes para este estado.</span>
+            </div>
+        </td>
+    </tr>
+{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="p-3">
+        {% paginacion pagina_obj %}
+    </div>
+</div>
+
+<!-- Modal: motivo de registro -->
+<div class="modal fade" id="modalMotivo" tabindex="-1" aria-labelledby="modalMotivoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalMotivoLabel">Motivo de registro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Solicitud de <strong id="motivoNombre"></strong></p>
+                <div class="alert alert-light border mb-0">
+                    <span id="motivoTexto" style="white-space: pre-line;"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de rechazo (compartido por todas las filas) -->
+<div class="modal fade" id="modalRechazo" tabindex="-1" aria-labelledby="modalRechazoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" id="formRechazo" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalRechazoLabel">Rechazar solicitud</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body">
+                <p>
+                    Vas a rechazar la solicitud de <strong id="rechazoNombre"></strong>.
+                    El motivo se incluirá en la notificación al usuario.
+                </p>
+
+                <div class="mb-3">
+                    <label for="motivo_rechazo" class="form-label">Motivo del rechazo</label>
+                    <select class="form-select" id="motivo_rechazo" name="motivo_rechazo" required>
+                        <option value="" selected disabled>Selecciona un motivo...</option>
+                        {% for valor, etiqueta in motivos_rechazo %}
+                        <option value="{{ valor }}">{{ etiqueta }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="detalle_rechazo" class="form-label">
+                        Comentario adicional <span id="detalleOpcional" class="text-secondary">(opcional)</span>
+                    </label>
+                    <textarea class="form-control" id="detalle_rechazo" name="detalle_rechazo"
+                              rows="3" maxlength="500"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-danger">Rechazar solicitud</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Bloqueo de usuario -->
+<div class="modal fade" id="modalBloqueo" tabindex="-1" aria-labelledby="modalBloqueoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" id="formBloqueo" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalBloqueoLabel">Bloquear usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p>Vas a suspender el acceso de <strong id="bloqueoNombre"></strong>. Selecciona la duración del bloqueo:</p>
+                
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="tipo_bloqueo" id="bloqueo7Dias" value="7_dias" checked>
+                    <label class="form-check-label" for="bloqueo7Dias">
+                        <strong>Bloqueo por 7 días</strong> (se desbloqueará automáticamente)
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="tipo_bloqueo" id="bloqueoIndefinido" value="indefinido">
+                    <label class="form-check-label" for="bloqueoIndefinido">
+                        <strong>Bloqueo indefinido</strong> (requiere desbloqueo manual)
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-danger"><i class="bi bi-lock"></i> Aplicar bloqueo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    // --- Modal: motivo de registro ---
+    document.getElementById("modalMotivo").addEventListener("show.bs.modal", function (event) {
+        const boton = event.relatedTarget;
+        document.getElementById("motivoNombre").textContent = boton.dataset.nombre;
+        document.getElementById("motivoTexto").textContent = boton.dataset.motivo || "Sin motivo indicado";
+    });
+
+    // --- Modal: rechazo ---
+    const modal    = document.getElementById("modalRechazo");
+    const form     = document.getElementById("formRechazo");
+    const select   = document.getElementById("motivo_rechazo");
+    const detalle  = document.getElementById("detalle_rechazo");
+    const opcional = document.getElementById("detalleOpcional");
+
+    // apunta el formulario a la solicitud elegida y lo limpia
+    modal.addEventListener("show.bs.modal", function (event) {
+        const boton = event.relatedTarget;
+        form.reset();
+        form.action = boton.dataset.action;
+        document.getElementById("rechazoNombre").textContent = boton.dataset.nombre;
+        detalle.required = false;
+        opcional.textContent = "(opcional)";
+    });
+
+    // si elige "otro", el comentario pasa a ser obligatorio
+    select.addEventListener("change", function () {
+        const esOtro = select.value === "otro";
+        detalle.required = esOtro;
+        opcional.textContent = esOtro ? "(obligatorio)" : "(opcional)";
+    });
+
+    // --- Navegación al detalle del usuario ---
+document.querySelectorAll(".usuario-row").forEach(function (fila) {
+
+    fila.addEventListener("click", function (event) {
+
+        // Evita navegar cuando se interactúa con botones,
+        // formularios u otros elementos interactivos.
+        if (event.target.closest(
+            "a, button, form, input, select, textarea, label"
+        )) {
+            return;
+        }
+
+        window.location.href = fila.dataset.url;
+    });
+
+    fila.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            window.location.href = fila.dataset.url;
+        }
+    });
+
+});
+
+    // --- Modal: bloqueo ---
+    const modalBloqueo = document.getElementById("modalBloqueo");
+    const formBloqueo  = document.getElementById("formBloqueo");
+    if (modalBloqueo) {
+        modalBloqueo.addEventListener("show.bs.modal", function (event) {
+            const boton = event.relatedTarget;
+            formBloqueo.action = boton.dataset.action;
+            document.getElementById("bloqueoNombre").textContent = boton.dataset.nombre;
+    });
+
+
+    // --- Búsqueda y ordenamiento automático ---
+
+    const formularioFiltros = document.getElementById('formFiltrosUsuarios');
+    const buscador = document.getElementById('buscarUsuario');
+    const selectorOrden = document.getElementById('ordenUsuarios');
+
+    if (formularioFiltros && buscador && selectorOrden) {
+
+        let temporizadorBusqueda;
+
+        // Buscar mientras se escribe
+        buscador.addEventListener('input', function () {
+
+            clearTimeout(temporizadorBusqueda);
+
+            temporizadorBusqueda = setTimeout(function () {
+                formularioFiltros.querySelector('[name="page"]')?.remove();
+                formularioFiltros.requestSubmit();
+            }, 400);
+
+        });
+
+        // Ordenar inmediatamente al cambiar la opción
+        selectorOrden.addEventListener('change', function () {
+            clearTimeout(temporizadorBusqueda);
+            formularioFiltros.querySelector('[name="page"]')?.remove();
+            formularioFiltros.requestSubmit();
+        });
+
+    }
+
+}
+});
+
+
+
+</script>
+{% endblock %}

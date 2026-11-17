@@ -1,0 +1,7 @@
+{% load static %}
+<div class="comuna-busqueda" data-comuna-busqueda data-url="{% static 'data/catalogo-comunas.json' %}"{% if region_select %} data-region-select="{{ region_select }}"{% endif %}>
+    <input type="text" class="form-control" id="{{ campo_id }}" name="{{ campo_nombre }}" value="{{ valor|default:'' }}" placeholder="{{ placeholder|default:'Indique la comuna de medición' }}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="{{ campo_id }}-opciones" aria-describedby="{{ campo_id }}-ayuda" {% if requerido %}required{% endif %}>
+    <input type="hidden" name="comuna_codigo" value="{{ codigo|default:'' }}" data-comuna-codigo>
+    <div id="{{ campo_id }}-opciones" class="comuna-opciones" role="listbox" hidden></div>
+    <small id="{{ campo_id }}-ayuda" class="comuna-ayuda" aria-live="polite">Escriba al menos 2 letras y selecciona una comuna.</small>
+</div>

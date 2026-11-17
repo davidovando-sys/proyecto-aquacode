@@ -1,0 +1,149 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}Editar usuario | Panel AquaCivis{% endblock %}
+{% block admin_title %}Editar usuario{% endblock %}
+{% block admin_subtitle %}Modifica los datos personales y el rol del usuario dentro de AquaCivis.{% endblock %}
+
+{% block admin_actions %}
+<a href="{% url 'ver_usuario' solicitud.id %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Volver a detalle
+</a>
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="user-edit-layout">
+
+    <div class="user-edit-main">
+
+        <form method="post" class="admin-card admin-form content-form">
+            {% csrf_token %}
+
+            {% if formulario.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ formulario.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="user-form-grid">
+
+                <div class="form-field">
+                    <label for="{{ formulario.nombre.id_for_label }}">
+                        {{ formulario.nombre.label }}
+                    </label>
+                    {{ formulario.nombre }}
+                    {{ formulario.nombre.errors }}
+                </div>
+
+                <div class="form-field">
+                    <label for="{{ formulario.email.id_for_label }}">
+                        {{ formulario.email.label }}
+                    </label>
+                    {{ formulario.email }}
+                    {{ formulario.email.errors }}
+                </div>
+
+                <div class="form-field">
+                    <label for="{{ formulario.comuna.id_for_label }}">
+                        {{ formulario.comuna.label }}
+                    </label>
+
+                    {% include 'partials/comuna_busqueda.html' with campo_id='id_comuna' campo_nombre='comuna' requerido=True valor=formulario.comuna.value %}
+
+                    {{ formulario.comuna.errors }}
+                </div>
+
+                <div class="form-field">
+                    <label for="{{ formulario.rol.id_for_label }}">
+                        {{ formulario.rol.label }}
+                    </label>
+                    {{ formulario.rol }}
+                    {% if formulario.rol.help_text %}
+                        <small class="text-muted">{{ formulario.rol.help_text }}</small>
+                    {% endif %}
+                    {{ formulario.rol.errors }}
+                </div>
+
+            </div>
+
+            <div class="admin-form-footer">
+
+                <span>
+                    <i class="bi bi-shield-lock"></i>
+                    {% if formulario.rol.field.disabled %}
+                        El rol de esta cuenta no se puede modificar con tu nivel de permisos.
+                    {% else %}
+                        Los cambios de rol se aplican inmediatamente.
+                    {% endif %}
+                </span>
+
+                <button class="btn btn-admin-primary" type="submit">
+                    <i class="bi bi-check2-circle"></i>
+                    Guardar cambios
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+    <div class="user-edit-sidebar">
+
+        <aside class="admin-card permissions-card">
+
+            <h2>Permisos por rol</h2>
+
+            <div class="permission-role">
+
+                <span class="permission-icon admin">
+                    <i class="bi bi-shield-check"></i>
+                </span>
+
+                <div>
+                    <strong>Administrador</strong>
+                    <p>
+                        Puede entrar al panel, gestionar usuarios,
+                        mediciones, umbrales, contenido y descargas.
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="permission-role">
+
+                <span class="permission-icon monitor">
+                    <i class="bi bi-droplet"></i>
+                </span>
+
+                <div>
+                    <strong>Monitor</strong>
+                    <p>
+                        Puede iniciar sesión y registrar mediciones,
+                        pero no puede acceder al panel administrativo.
+                    </p>
+                </div>
+
+            </div>
+
+            {% if usuario_editado == request.user %}
+                <p class="permission-note">
+                    <i class="bi bi-info-circle"></i>
+                    Estás editando tu propia cuenta. Por seguridad,
+                    no puedes quitarte el acceso de administrador.
+                </p>
+            {% elif formulario.rol.field.disabled %}
+                <p class="permission-note">
+                    <i class="bi bi-info-circle"></i>
+                    El rol de esta cuenta está bloqueado para ti.
+                </p>
+            {% endif %}
+            
+
+        </aside>
+
+    </div>
+
+</div>
+
+{% endblock %}

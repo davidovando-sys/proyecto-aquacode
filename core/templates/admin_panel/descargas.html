@@ -1,0 +1,21 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}Descargas | Panel AquaCivis{% endblock %}
+{% block admin_title %}Descarga de datos{% endblock %}
+{% block admin_subtitle %}Exporta las mediciones para análisis, respaldo o elaboración de informes.{% endblock %}
+
+{% block admin_content %}
+<div class="download-grid">
+    <article class="admin-card download-card">
+        <span class="download-icon blue"><i class="bi bi-filetype-csv"></i></span><h2>Exportar CSV</h2><p>Compatible con Excel, Google Sheets y herramientas de análisis.</p><a href="{% url 'exportar_mediciones_csv' %}" class="btn btn-admin-primary"><i class="bi bi-download"></i> Descargar CSV</a>
+    </article>
+    <article class="admin-card download-card">
+        <span class="download-icon green"><i class="bi bi-file-earmark-spreadsheet"></i></span><h2>Exportar Excel</h2><p>Tabla lista para abrir y trabajar directamente en Microsoft Excel.</p><a href="{% url 'exportar_mediciones_excel' %}" class="btn btn-success"><i class="bi bi-download"></i> Descargar Excel</a>
+    </article>
+</div>
+<div class="admin-card data-summary">
+    <div><i class="bi bi-bar-chart"></i><span><strong>{{ total_mediciones }}</strong> mediciones registradas</span></div>
+    <div><i class="bi bi-geo-alt"></i><span><strong>{{ total_comunas }}</strong> ubicaciones con datos</span></div>
+    <div><i class="bi bi-clock"></i><span>Último registro: <strong>{% if ultima_medicion %}{{ ultima_medicion.fecha_registro|date:'d/m/Y H:i' }}{% else %}sin registros{% endif %}</strong></span></div>
+</div>
+{% endblock %}

@@ -1,0 +1,568 @@
+
+{% extends 'base.html' %}
+{% load static %}
+{% load paginacion_tags %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+{% endblock %}
+{% block title %}Historial | AquaCivis{% endblock %}
+
+{% block content %}
+
+<section class="content-section history-section" aria-labelledby="history-title">
+    <div class="container">
+
+        <header class="history-page-header">
+            <nav class="history-breadcrumb" aria-label="Ruta de navegación">
+                <a href="{% url 'home' %}">Inicio</a>
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                <span aria-current="page">Historial</span>
+            </nav>
+
+            
+            <h1 id="history-title">Historial y gráficos</h1>
+            <p>Consulta las mediciones registradas, analiza su evolución y filtra los registros por ubicación, nivel de alerta y fecha.</p>
+        </header>
+
+        <div class="history-shell">
+            <!-- Filtros generales: afectan a los gráficos y a la tabla -->
+            <form method="get"
+                action="{% url 'graficos' %}"
+                class="filter-bar history-filter-bar"
+                data-loading-message="Actualizando historial y gráficos..."
+                aria-label="Filtros generales del historial">
+
+                <div class="filter-group">
+                    <label for="chart-region">Región</label>
+
+                    <select class="form-select"
+                            id="chart-region"
+                            name="region"
+                            onchange="
+                                document.getElementById('chart-comuna').value = '';
+                                this.form.querySelector('[data-comuna-codigo]').value = '';
+                                this.form.requestSubmit();
+                            ">
+
+                        <option value="">Todas las regiones</option>
+
+                        {% for codigo, nombre in regiones %}
+                            <option value="{{ codigo }}"
+                                {% if region_seleccionada == codigo|stringformat:'s' %}selected{% endif %}>
+                                {{ nombre }}
+                            </option>
+                        {% endfor %}
+
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="chart-comuna">Comuna</label>
+
+                    {% include 'partials/comuna_busqueda.html' with campo_id='chart-comuna' campo_nombre='comuna' valor=comuna_seleccionada.nombre codigo=comuna_seleccionada.pk placeholder='Todas las comunas' region_select='chart-region' %}
+                </div>
+
+                <div class="filter-group">
+                    <label for="chart-periodo">Período</label>
+
+                    <select class="form-select"
+                            id="chart-periodo"
+                            name="periodo"
+                            onchange="this.form.requestSubmit()">
+
+                        <option value="hoy"
+                            {% if periodo_seleccionado == 'hoy' %}selected{% endif %}>
+                            Hoy
+                        </option>
+
+                        <option value="7"
+                            {% if periodo_seleccionado == '7' %}selected{% endif %}>
+                            Últimos 7 días
+                        </option>
+
+                        <option value="30"
+                            {% if periodo_seleccionado == '30' %}selected{% endif %}>
+                            Últimos 30 días
+                        </option>
+
+                        <option value="todo" {% if periodo_seleccionado == 'todo' %}selected{% endif %}>
+                            Todos los tiempos
+                        </option>
+
+                    </select>
+                </div>
+
+                <p id="charts-empty" class="text-secondary mb-4" role="status" hidden>
+                    No hay mediciones para la ubicación y el período seleccionados.
+                </p>
+
+            </form>
+
+            <!-- Gráficos -->
+            <section class="history-charts"
+                     aria-labelledby="history-charts-title">
+
+                <h2 class="visually-hidden" id="history-charts-title">
+                    Gráficos de evolución de las mediciones
+                </h2>
+
+                <!-- Gráfico de pH -->
+                <article class="history-chart-card">
+                    <div class="history-chart-header">
+                        <div>
+                            <span class="history-chart-icon ph">
+                                <i class="bi bi-droplet" aria-hidden="true"></i>
+                            </span>
+                            <h3>pH vs. tiempo</h3>
+                        </div>
+
+                        <span class="history-chart-state">
+                            {% if datos_graficos %}Disponible{% else %}Sin datos{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="history-chart-mount" id="chart-ph">
+                        <canvas aria-label="Gráfico de pH a través del tiempo"></canvas>
+
+                        <div class="history-chart-empty" hidden>
+                            <i class="bi bi-graph-up" aria-hidden="true"></i>
+                            <p>No hay mediciones de pH para los filtros seleccionados.</p>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Gráfico de conductividad -->
+                <article class="history-chart-card">
+                    <div class="history-chart-header">
+                        <div>
+                            <span class="history-chart-icon conductivity">
+                                <i class="bi bi-lightning-charge" aria-hidden="true"></i>
+                            </span>
+                            <h3>Conductividad eléctrica vs. tiempo</h3>
+                        </div>
+
+                        <span class="history-chart-state">
+                            {% if datos_graficos %}Disponible{% else %}Sin datos{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="history-chart-mount" id="chart-conductividad">
+                        <canvas aria-label="Gráfico de conductividad eléctrica a través del tiempo"></canvas>
+
+                        <div class="history-chart-empty" hidden>
+                            <i class="bi bi-graph-up" aria-hidden="true"></i>
+                            <p>No hay mediciones de conductividad para los filtros seleccionados.</p>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Gráfico de TDS -->
+                <article class="history-chart-card">
+                    <div class="history-chart-header">
+                        <div>
+                            <span class="history-chart-icon tds">
+                                <i class="bi bi-water" aria-hidden="true"></i>
+                            </span>
+                            <h3>Sólidos disueltos (TDS) vs. tiempo</h3>
+                        </div>
+
+                        <span class="history-chart-state">
+                            {% if datos_graficos %}Disponible{% else %}Sin datos{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="history-chart-mount" id="chart-tds">
+                        <canvas aria-label="Gráfico de sólidos disueltos a través del tiempo"></canvas>
+
+                        <div class="history-chart-empty" hidden>
+                            <i class="bi bi-graph-up" aria-hidden="true"></i>
+                            <p>No hay mediciones de TDS para los filtros seleccionados.</p>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Gráfico de temperatura -->
+                <article class="history-chart-card">
+                    <div class="history-chart-header">
+                        <div>
+                            <span class="history-chart-icon temperature">
+                                <i class="bi bi-thermometer-half" aria-hidden="true"></i>
+                            </span>
+                            <h3>Temperatura vs. tiempo</h3>
+                        </div>
+
+                        <span class="history-chart-state">
+                            {% if datos_graficos %}Disponible{% else %}Sin datos{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="history-chart-mount" id="chart-temperatura">
+                        <canvas aria-label="Gráfico de temperatura a través del tiempo"></canvas>
+
+                        <div class="history-chart-empty" hidden>
+                            <i class="bi bi-graph-up" aria-hidden="true"></i>
+                            <p>No hay mediciones de temperatura para los filtros seleccionados.</p>
+                        </div>
+                    </div>
+                </article>
+
+            </section>
+
+            <!-- Historial de registros -->
+            <div class="history-card" id="historial">
+
+                <div class="history-card-header">
+                    <div>
+                        <h2>Historial de registros</h2>
+                        <p>
+                            {{ total_mediciones }}
+                            registro{{ total_mediciones|pluralize }}
+                            encontrado{{ total_mediciones|pluralize }}
+                        </p>
+                    </div>
+
+                    {% if user.is_staff %}
+                        <a class="btn btn-outline-aquacivis"
+                           href="{% url 'exportar_mediciones_csv' %}">
+                            <i class="bi bi-download" aria-hidden="true"></i>
+                            Exportar CSV
+                        </a>
+                    {% endif %}
+                </div>
+
+                <!-- Filtros exclusivos de la tabla -->
+                <form method="get"
+                      action=#historial
+                      class="history-record-filters"
+                      data-loading-message="Filtrando registros..."
+                      aria-label="Filtros del historial de registros">
+
+                    <!-- Conservar filtros generales -->
+                    <!-- Conservar filtros generales -->
+                    <input type="hidden"
+                        name="comuna_codigo"
+                        value="{{ comuna_seleccionada.pk|default:'' }}">
+
+                    <input type="hidden"
+                        name="region"
+                        value="{{ region_seleccionada }}">
+
+                    <input type="hidden"
+                        name="periodo"
+                        value="{{ periodo_seleccionado }}">
+
+                    <!-- Nivel de alerta -->
+                    <div class="filter-group">
+                        <label for="filtro-alerta">Nivel de alerta</label>
+
+                        <select class="form-select"
+                                id="filtro-alerta"
+                                name="alerta"
+                                onchange="this.form.requestSubmit()">
+
+                            <option value="">Todos los niveles</option>
+
+                            <option value="Verde"
+                                {% if alerta_seleccionada == 'Verde' %}selected{% endif %}>
+                                Riesgo bajo
+                            </option>
+
+                            <option value="Amarillo"
+                                {% if alerta_seleccionada == 'Amarillo' %}selected{% endif %}>
+                                Riesgo medio
+                            </option>
+
+                            <option value="Rojo"
+                                {% if alerta_seleccionada == 'Rojo' %}selected{% endif %}>
+                                Riesgo alto
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="filter-group col-12 col-md-6">
+                            <label for="fecha-desde">Desde</label>
+                            <input class="form-control w-100" type="text" id="fecha-desde" name="fecha_desde"
+                                value="{{ fecha_desde }}" placeholder="Selecciona una fecha"
+                                data-selector-fecha="desde" data-autoenviar
+                                data-min="{{ rango_fechas.minima|date:'Y-m-d' }}"
+                                data-max="{{ rango_fechas.hoy|date:'Y-m-d' }}">
+                        </div>
+
+                        <div class="filter-group col-12 col-md-6">
+                            <label for="fecha-hasta">Hasta</label>
+                            <input class="form-control w-100" type="text" id="fecha-hasta" name="fecha_hasta"
+                                value="{{ fecha_hasta }}" placeholder="Selecciona una fecha"
+                                data-selector-fecha="hasta" data-autoenviar
+                                data-min="{{ rango_fechas.minima|date:'Y-m-d' }}"
+                                data-max="{{ rango_fechas.hoy|date:'Y-m-d' }}">
+                        </div>
+                    </div>
+
+                    <!-- Limpiar filtros exclusivos de la tabla -->
+                     
+                    <div class="history-record-filter-actions">
+                       {% if alerta_seleccionada or fecha_desde or fecha_hasta %} 
+                        <a class="btn btn-outline-aquacivis"
+                        href="{% url 'graficos' %}?region={{ region_seleccionada|urlencode }}&comuna_codigo={{ codigo_comuna_seleccionada|urlencode }}&periodo={{ periodo_seleccionado|urlencode }}#historial">
+                            <i class="bi bi-x-circle" aria-hidden="true"></i>
+                            Limpiar filtros
+                        </a>
+                        {% else %}
+                        <button class="btn btn-outline-secondary" type="button" disabled>
+                            <i class="bi bi-x-circle" aria-hidden="true"></i>
+                            Limpiar filtros
+                        </button>
+                        {% endif %}
+                    </div>
+                    
+                </form>
+
+                <!-- Tabla de mediciones -->
+                <div class="table-responsive" id="historial">
+                    <table class="table history-table align-middle mb-0">
+
+                        <caption class="visually-hidden">
+                            Mediciones de calidad del agua filtradas por comuna,
+                            período, fechas y nivel de alerta.
+                        </caption>
+
+                        <thead>
+                            <tr>
+                                <th scope="col">Fecha</th>
+                                <th scope="col">Comuna</th>
+                                <th scope="col">pH</th>
+                                <th scope="col">Conductividad</th>
+                                <th scope="col">TDS</th>
+                                <th scope="col">Temperatura</th>
+                                <th scope="col">Alerta</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for medicion in mediciones %}
+                                <tr>
+                                    <td>
+                                        {{ medicion.fecha_registro|date:'d/m/Y H:i' }}
+                                    </td>
+
+                                    <td>
+                                        <strong>{{ medicion.ubicacion }}</strong>
+                                    </td>
+
+                                    <td>{{ medicion.ph }}</td>
+                                    <td>{{ medicion.conductividad }} mS/cm</td>
+                                    <td>{{ medicion.tds }} ppm</td>
+                                    <td>{{ medicion.temperatura }} °C</td>
+
+                                    <td>
+                                        <span class="history-status {% if medicion.alerta_general == 'Verde' %}status-low{% elif medicion.alerta_general == 'Amarillo' %}status-medium{% else %}status-high{% endif %}">
+
+                                            {% if medicion.alerta_general == 'Verde' %}
+                                                <i class="bi bi-check-circle-fill"
+                                                   aria-hidden="true"></i>
+                                                Riesgo bajo
+
+                                            {% elif medicion.alerta_general == 'Amarillo' %}
+                                                <i class="bi bi-exclamation-triangle-fill"
+                                                   aria-hidden="true"></i>
+                                                Riesgo medio
+
+                                            {% else %}
+                                                <i class="bi bi-exclamation-octagon-fill"
+                                                   aria-hidden="true"></i>
+                                                Riesgo alto
+                                            {% endif %}
+
+                                        </span>
+                                    </td>
+                                </tr>
+
+                            {% empty %}
+                                <tr>
+                                    <td colspan="7">
+                                        <div class="history-empty">
+                                            <span class="history-empty-icon">
+                                                <i class="bi bi-clipboard-data"
+                                                   aria-hidden="true"></i>
+                                            </span>
+
+                                            <strong>
+                                                No hay mediciones para estos filtros
+                                            </strong>
+
+                                            <p>
+                                                Prueba con otro nivel de alerta,
+                                                cambia las fechas o amplía el período.
+                                            </p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+
+                    </table>
+                </div>
+
+                {% paginacion pagina_obj ancla='#historial' %}
+
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+
+{% block scripts %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js"></script>
+<script src="{% static 'js/selector_fechas.js' %}"></script>
+
+{{ datos_graficos|json_script:"history-chart-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const elementoDatos = document.getElementById('history-chart-data');
+
+    if (!elementoDatos) {
+        return;
+    }
+
+    const mediciones = JSON.parse(elementoDatos.textContent);
+
+    const etiquetas = mediciones.map(function (medicion) {
+        return medicion.etiqueta;
+    });
+
+    const definiciones = [
+        {
+            id: 'chart-ph',
+            campo: 'ph',
+            etiqueta: 'pH',
+            color: '#1695c6',
+            fondo: 'rgba(22, 149, 198, 0.12)'
+        },
+        {
+            id: 'chart-conductividad',
+            campo: 'conductividad',
+            etiqueta: 'Conductividad (mS/cm)',
+            color: '#d99a16',
+            fondo: 'rgba(217, 154, 22, 0.12)'
+        },
+        {
+            id: 'chart-tds',
+            campo: 'tds',
+            etiqueta: 'TDS (ppm)',
+            color: '#2aa79b',
+            fondo: 'rgba(42, 167, 155, 0.12)'
+        },
+        {
+            id: 'chart-temperatura',
+            campo: 'temperatura',
+            etiqueta: 'Temperatura (°C)',
+            color: '#d94b5b',
+            fondo: 'rgba(217, 75, 91, 0.12)'
+        }
+    ];
+
+    definiciones.forEach(function (definicion) {
+
+        const contenedor = document.getElementById(definicion.id);
+
+        if (!contenedor) {
+            return;
+        }
+
+        const canvas = contenedor.querySelector('canvas');
+        const estadoVacio = contenedor.querySelector('.history-chart-empty');
+
+        if (!canvas || !estadoVacio) {
+            return;
+        }
+
+        if (mediciones.length === 0) {
+            canvas.hidden = true;
+            estadoVacio.hidden = false;
+            return;
+        }
+
+        new Chart(canvas, {
+            type: 'line',
+
+            data: {
+                labels: etiquetas,
+
+                datasets: [{
+                    label: definicion.etiqueta,
+
+                    data: mediciones.map(function (medicion) {
+                        return medicion[definicion.campo];
+                    }),
+
+                    borderColor: definicion.color,
+                    backgroundColor: definicion.fondo,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+
+                    tooltip: {
+                        displayColors: false
+                    }
+                },
+
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(25, 76, 112, 0.06)'
+                        },
+
+                        ticks: {
+                            maxTicksLimit: 6,
+                            color: '#687b8b'
+                        }
+                    },
+
+                    y: {
+                        beginAtZero: false,
+
+                        grid: {
+                            color: 'rgba(25, 76, 112, 0.08)'
+                        },
+
+                        ticks: {
+                            color: '#687b8b'
+                        }
+                    }
+                }
+            }
+        });
+    });
+});
+</script>
+
+
+
+
+{% endblock %}

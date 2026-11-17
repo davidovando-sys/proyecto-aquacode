@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+
+{% block title %}Solicitar Registro - AquaCivis{% endblock %}
+
+{% block content %}
+<div class="container cuenta-page">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            
+            <div class="card cuenta-card">
+                <div class="card-body cuenta-card-body">
+                    
+                    <div class="text-center mb-4">
+                        <i class="bi bi-person-lines-fill text-aquacivis" style="font-size: 3rem;"></i>
+                        <h3 class="fw-bold text-aquacivis mt-2">Solicitud de Monitor</h3>
+                        <p class="text-muted">Únete a la red ciudadana. Completa tus datos para solicitar acceso a la plataforma de registro de calidad del agua.</p>
+                    </div>
+
+                    <!-- Alerta informativa -->
+                    <div class="alert alert-info border-0 bg-light text-center rounded-3 mb-4" role="alert">
+                        <i class="bi bi-info-circle-fill me-2 text-info"></i>
+                        Recibirás un código de 4 números por correo. Ingrésalo en la siguiente pantalla para enviar tu solicitud al administrador.
+                    </div>
+
+                    <form method="POST" action="" data-loading-message="Enviando tu solicitud...">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="nombre" class="form-label fw-bold text-secondary">Nombre Completo</label>
+                                <input type="text" id="nombre" name="nombre"
+                                    class="form-control {% if errores.nombre %}is-invalid{% endif %}"
+                                    placeholder="Ej. Juan Pérez" value="{{ datos.nombre|default:'' }}" required>
+                                {% if errores.nombre %}<div class="invalid-feedback">{{ errores.nombre }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="comuna" class="form-label fw-bold text-secondary">Comuna de Monitoreo</label>
+                                {% include 'partials/comuna_busqueda.html' with campo_id='comuna' campo_nombre='comuna' requerido=True valor=datos.comuna error=errores.comuna %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="email" class="form-label fw-bold text-secondary">Correo Electrónico</label>
+                            <input type="email" id="email" name="email"
+                                class="form-control {% if errores.email %}is-invalid{% endif %}"
+                                placeholder="ejemplo@correo.cl" value="{{ datos.email|default:'' }}" required>
+                            {% if errores.email %}<div class="invalid-feedback">{{ errores.email }}</div>{% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="password" class="form-label fw-bold text-secondary">Contraseña</label>
+                                <input type="password" id="password" name="password"
+                                    class="form-control {% if errores.password %}is-invalid{% endif %}"
+                                    placeholder="Ingresa una contraseña" required>
+                                {% if errores.password %}<div class="invalid-feedback">{{ errores.password }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="password2" class="form-label fw-bold text-secondary">Confirmar Contraseña</label>
+                                <input type="password" id="password2" name="password2"
+                                    class="form-control {% if errores.password2 %}is-invalid{% endif %}"
+                                    placeholder="Repite tu contraseña" required>
+                                {% if errores.password2 %}<div class="invalid-feedback">{{ errores.password2 }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="motivo" class="form-label fw-bold text-secondary">¿Por qué deseas ser monitor? (Opcional)</label>
+                            <textarea class="form-control" id="motivo" name="motivo" rows="2"
+                                    placeholder="Cuéntanos brevemente tu interés en participar...">{{ datos.motivo|default:'' }}</textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-aquacivis rounded-pill py-2 fs-5">
+                                Enviar Solicitud
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <hr class="my-4 text-muted">
+                        <p class="text-muted mb-0">¿Ya tienes una cuenta aprobada? <a href="{% url 'login' %}" class="text-decoration-none text-info">Inicia Sesión</a></p>
+                    </div>
+
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}

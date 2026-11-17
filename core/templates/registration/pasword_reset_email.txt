@@ -1,0 +1,18 @@
+
+Hola {{ user.first_name|default:user.username }},
+
+Recibimos una solicitud para restablecer la contraseña
+de tu cuenta en AquaCivis.
+
+Para establecer una nueva contraseña, ingresa al siguiente enlace:
+
+{{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}
+
+Por seguridad, el enlace tiene una duración de una hora
+y solo puede utilizarse una vez.
+
+Si no solicitaste este cambio, puedes ignorar el mensaje.
+Tu contraseña actual seguirá funcionando.
+
+Atentamente,
+Equipo AquaCivis

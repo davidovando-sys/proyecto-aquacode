@@ -1,0 +1,38 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}Umbrales | Panel AquaCivis{% endblock %}
+{% block admin_title %}Umbrales y alertas{% endblock %}
+{% block admin_subtitle %}Configura cuándo una medición se clasifica como normal, preventiva o crítica.{% endblock %}
+
+{% block admin_content %}
+<form method="post" class="admin-form">{% csrf_token %}
+    {% if formulario.non_field_errors %}<div class="alert alert-danger">{{ formulario.non_field_errors }}</div>{% endif %}
+    <div class="threshold-grid">
+        <section class="admin-card form-section">
+            <div class="form-section-title"><span class="blue"><i class="bi bi-droplet"></i></span><div><h2>pH</h2><p>Rangos mínimo y máximo.</p></div></div>
+            <div class="form-grid">
+                {% for campo in formulario %}{% if 'ph_' in campo.name %}<div class="form-field"><label for="{{ campo.id_for_label }}">{{ campo.label }}</label>{{ campo }}{{ campo.errors }}</div>{% endif %}{% endfor %}
+            </div>
+        </section>
+        <section class="admin-card form-section">
+            <div class="form-section-title"><span class="cyan"><i class="bi bi-water"></i></span><div><h2>TDS</h2><p>Sólidos disueltos en ppm.</p></div></div>
+            <div class="form-grid">
+                {% for campo in formulario %}{% if 'tds_' in campo.name %}<div class="form-field"><label for="{{ campo.id_for_label }}">{{ campo.label }}</label>{{ campo }}{{ campo.errors }}</div>{% endif %}{% endfor %}
+            </div>
+        </section>
+        <section class="admin-card form-section">
+            <div class="form-section-title"><span class="amber"><i class="bi bi-lightning-charge"></i></span><div><h2>Conductividad</h2><p>Valores preventivo y crítico.</p></div></div>
+            <div class="form-grid">
+                {% for campo in formulario %}{% if 'conductividad_' in campo.name %}<div class="form-field"><label for="{{ campo.id_for_label }}">{{ campo.label }}</label>{{ campo }}{{ campo.errors }}</div>{% endif %}{% endfor %}
+            </div>
+        </section>
+        <section class="admin-card form-section">
+            <div class="form-section-title"><span class="red"><i class="bi bi-thermometer-half"></i></span><div><h2>Temperatura</h2><p>Valores preventivo y crítico.</p></div></div>
+            <div class="form-grid">
+                {% for campo in formulario %}{% if 'temperatura_' in campo.name %}<div class="form-field"><label for="{{ campo.id_for_label }}">{{ campo.label }}</label>{{ campo }}{{ campo.errors }}</div>{% endif %}{% endfor %}
+            </div>
+        </section>
+    </div>
+    <div class="admin-form-footer"><span><i class="bi bi-info-circle"></i> Los cambios se aplican a las mediciones nuevas.</span><button class="btn btn-admin-primary" type="submit"><i class="bi bi-check2-circle"></i> Guardar cambios</button></div>
+</form>
+{% endblock %}

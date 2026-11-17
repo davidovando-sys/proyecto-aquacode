@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+</head>
+<body style="margin:0; padding:0; background-color:#f4f7f9; font-family:Arial, sans-serif; color:#1a202c;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f7f9; padding:30px 15px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:580px; background-color:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+          
+          <tr>
+            <td style="background-color:#114b79; padding:24px 30px; text-align:center;">
+              <h1 style="margin:0; color:#ffffff; font-size:24px; letter-spacing:0.5px;">💧 AquaCivis</h1>
+              <p style="margin:5px 0 0; color:#bee3f8; font-size:13px;">Recordatorio de Monitoreo de Agua</p>
+            </td>
+          </tr>
+
+         
+          <tr>
+            <td style="padding:30px;">
+              <h2 style="margin:0 0 16px; font-size:20px; color:#0b192c;">Hola, {{ nombre }}:</h2>
+              <p style="font-size:15px; line-height:1.6; color:#2d3748; margin-bottom:20px;">
+                {{ apertura }}
+              </p>
+
+             
+              <div style="background-color:#ebf8ff; border-left:4px solid #16798d; padding:15px; border-radius:4px; font-size:14px; line-height:1.5; color:#2c5282; margin-bottom:26px;">
+                {{ bloques|linebreaksbr }}
+              </div>
+
+              
+              <div style="text-align:center; margin:28px 0 10px;">
+                <a href="{{ url_medicion }}" style="background-color:#16798d; color:#ffffff; text-decoration:none; padding:13px 28px; border-radius:6px; font-weight:bold; font-size:15px; display:inline-block;">
+                  Registrar nueva medición
+                </a>
+              </div>
+            </td>
+          </tr>
+
+   
+          <tr>
+            <td style="background-color:#edf2f7; padding:16px 30px; text-align:center; font-size:12px; color:#718096;">
+              Este recordatorio se envía automáticamente · Equipo AquaCivis
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

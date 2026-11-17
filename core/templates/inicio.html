@@ -1,0 +1,694 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}AquaCivis - Monitoreo ciudadano del agua{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<section class="home-hero" aria-labelledby="hero-title">
+    <div class="container">
+        <div class="home-hero-copy">
+            <div class="hero-eyebrow"><i class="bi bi-droplet-half" aria-hidden="true"></i> Agua segura, comunidad informada</div>
+            <h1 id="hero-title">{{ contenido_web.texto_hero }}</h1>
+            <p class="hero-copy">
+                {{ contenido_web.mensaje_bienvenida }}
+            </p>
+
+            <div class="hero-actions">
+                <a class="btn btn-outline-light rounded-pill px-4 py-2 fw-bold" href="#mapa-alertas">
+                    <i class="bi bi-map me-1" aria-hidden="true"></i> Ver mapa y alertas
+                </a>
+                <a class="btn btn-outline-light rounded-pill px-4 py-2 fw-bold" href="{% url 'sobre_nosotros' %}#registro">
+                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i> Sobre Nosotros
+                </a>
+
+                
+
+                <a class="btn btn-outline-light rounded-pill px-4 py-2 fw-bold" href="{% url 'medicion' %}">
+                    <i class="bi bi-plus-circle me-1" aria-hidden="true"></i> Ingresar medición
+                </a>
+                {% if user.is_authenticated %}
+                <a class="btn btn-outline-light rounded-pill px-4 py-2 fw-bold" href="{% url 'historial_mediciones' %}">
+                    <i class="bi bi-clipboard2-data me-1" aria-hidden="true"></i> Mis mediciones
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content-section" id="que-medimos" aria-labelledby="objectives-title">
+    <div class="container">
+        <div class="section-heading">
+            <div class="kicker">Nuestra plataforma</div>
+            <h2 id="objectives-title">Información clara para cuidar el agua</h2>
+            <p>Reunimos mediciones ciudadanas y datos relevantes para que cada persona pueda entender el estado del agua potable de su comunidad.</p>
+        </div>
+
+        <div class="row g-3">
+            <div class="water-guide mt-5" aria-labelledby="states-title">
+    <div class="section-heading">
+        <div class="kicker">Interpretación de resultados</div>
+        <h2 id="states-title">¿Qué significa cada estado?</h2>
+        <p>
+            AquaCivis combina los parámetros registrados para obtener una
+            alerta general. Cada resultado incluye un color, un icono y una
+            explicación del nivel de riesgo.
+        </p>
+    </div>
+
+    <div class="status-grid">
+        <article class="status-card status-normal">
+            <span class="status-icon" aria-hidden="true">
+                <i class="bi bi-check-circle-fill"></i>
+            </span>
+
+            <div>
+                <span class="status-name">Estado verde · Riesgo bajo</span>
+                <h3>Los parámetros no presentan una alerta importante</h3>
+
+                <p>
+                    La evaluación general indica que los valores analizados
+                    se encuentran dentro de los límites configurados.
+                </p>
+
+                <p class="status-action">
+                    <strong>Recomendación:</strong> continuar con el monitoreo
+                    periódico.
+                </p>
+            </div>
+        </article>
+
+        <article class="status-card status-preventive">
+            <span class="status-icon" aria-hidden="true">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </span>
+
+            <div>
+                <span class="status-name">Estado amarillo · Riesgo medio</span>
+                <h3>Se detectó una variación que debe revisarse</h3>
+
+                <p>
+                    Uno o más parámetros presentan una variación que requiere
+                    atención, aunque no alcanza el nivel de riesgo alto.
+                </p>
+
+                <p class="status-action">
+                    <strong>Recomendación:</strong> repetir la medición y revisar
+                    que el instrumento se haya utilizado correctamente.
+                </p>
+            </div>
+        </article>
+
+        <article class="status-card status-alert">
+            <span class="status-icon" aria-hidden="true">
+                <i class="bi bi-x-octagon-fill"></i>
+            </span>
+
+            <div>
+                <span class="status-name">Estado rojo · Riesgo alto</span>
+                <h3>Existe un parámetro en un nivel crítico</h3>
+
+                <p>
+                    Uno o más valores superan los límites críticos configurados
+                    en la plataforma.
+                </p>
+
+                <p class="status-action">
+                    <strong>Recomendación:</strong> repetir la medición y solicitar
+                    una evaluación especializada.
+                </p>
+            </div>
+        </article>
+    </div>
+</div>
+
+<div class="parameter-guide mt-5" aria-labelledby="parameters-title">
+    <div class="section-heading">
+        <div class="kicker">Parámetros monitoreados</div>
+        <h2 id="parameters-title">¿Qué significa cada parámetro?</h2>
+        <p>
+            Cada parámetro entrega información diferente sobre las
+            características del agua.
+        </p>
+    </div>
+
+    <div class="parameter-grid">
+        <article class="parameter-card">
+            <span class="parameter-icon" aria-hidden="true">
+                <i class="bi bi-droplet-half"></i>
+            </span>
+
+            <h3>pH</h3>
+            <p>
+                Indica qué tan ácida o alcalina es el agua. Un valor de 7
+                corresponde a una condición neutra.
+            </p>
+
+            <details class="parameter-details">
+                <summary>Ver información técnica</summary>
+                <p>
+                    <strong>Rango permitido para el registro:</strong>
+                    de 0,01 a 14,00.
+                </p>
+                <p>
+                    El nivel de riesgo se determina mediante los umbrales
+                    configurados según la norma NCh409/1.
+                </p>
+            </details>
+        </article>
+
+        <article class="parameter-card">
+            <span class="parameter-icon" aria-hidden="true">
+                <i class="bi bi-water"></i>
+            </span>
+
+            <h3>Sólidos disueltos totales</h3>
+            <p>
+                Los TDS representan la cantidad de minerales, sales y otras
+                sustancias disueltas en el agua. Se expresan en ppm.
+            </p>
+
+            <details class="parameter-details">
+                <summary>Ver información técnica</summary>
+                <p>
+                    <strong>Rango permitido para el registro:</strong>
+                    de 0 a 9990 ppm.
+                </p>
+                <p>
+                    El nivel de riesgo se determina mediante los umbrales
+                    configurados según la norma NCh409/1.
+                </p>
+            </details>
+        </article>
+
+        <article class="parameter-card">
+            <span class="parameter-icon" aria-hidden="true">
+                <i class="bi bi-lightning-charge"></i>
+            </span>
+
+            <h3>Conductividad eléctrica</h3>
+            <p>
+                Mide la capacidad del agua para conducir electricidad y se
+                relaciona con la presencia de sales e iones disueltos.
+            </p>
+
+            <details class="parameter-details">
+                <summary>Ver información técnica</summary>
+                <p>
+                    <strong>Rango permitido para el registro:</strong>
+                    de 0 a 200 mS/cm.
+                </p>
+                <p>
+                    Su evaluación requiere una línea base obtenida a partir
+                    de al menos 10 mediciones anteriores.
+                </p>
+            </details>
+        </article>
+
+        <article class="parameter-card">
+            <span class="parameter-icon" aria-hidden="true">
+                <i class="bi bi-thermometer-half"></i>
+            </span>
+
+            <h3>Temperatura</h3>
+            <p>
+                Representa la condición térmica del agua y puede variar según
+                el clima, la hora y el lugar de medición.
+            </p>
+
+            <details class="parameter-details">
+                <summary>Ver información técnica</summary>
+                <p>
+                    <strong>Rango permitido para el registro:</strong>
+                    de 0 a 80 °C.
+                </p>
+                <p>
+                    Su evaluación requiere una línea base obtenida a partir
+                    de al menos 10 mediciones anteriores.
+                </p>
+            </details>
+        </article>
+    </div>
+
+    <div class="information-notice" role="note">
+        <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+        <p>
+            Los resultados de AquaCivis apoyan el monitoreo ciudadano y no
+            reemplazan un análisis realizado por un laboratorio autorizado.
+        </p>
+    </div>
+</div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <article class="objective-card">
+                    <span class="objective-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></span>
+                    <h3>Monitoreo ciudadano</h3>
+                    <p>Mediciones comunitarias que amplían la vigilancia colectiva del agua.</p>
+                </article>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <article class="objective-card">
+                    <span class="objective-icon"><i class="bi bi-clipboard2-check" aria-hidden="true"></i></span>
+                    <h3>Norma NCh409/1</h3>
+                    <p>Parámetros de referencia para evaluar la calidad del agua potable.</p>
+                </article>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <article class="objective-card">
+                    <span class="objective-icon"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></span>
+                    <h3>Datos históricos</h3>
+                    <p>Evolución de las mediciones para identificar cambios y tendencias.</p>
+                </article>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <article class="objective-card">
+                    <span class="objective-icon"><i class="bi bi-bell-fill" aria-hidden="true"></i></span>
+                    <h3>Sistema de alertas</h3>
+                    <p>Niveles de riesgo bajo, medio y alto presentados con colores, textos e iconos.</p>
+                </article>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content-section bg-white" id="graficos-evolucion" aria-labelledby="charts-title">
+    <div class="container">
+        <div class="section-heading">
+            <div class="kicker">Análisis Temporal</div>
+            <h2 id="charts-title">Evolución de Parámetros</h2>
+            <p>Observa el comportamiento histórico del agua en base a los reportes ciudadanos.</p>
+        </div>
+
+        <div class="filter-bar px-0 pt-0 mb-4" aria-label="Filtros de los gráficos">
+            <div class="filter-group">
+                <label for="chart-region">Región</label>
+                <select class="form-select" id="chart-region">
+                    <option value="" selected>Todas las regiones</option>
+                    {% for codigo, nombre in regiones %}<option value="{{ codigo }}">{{ nombre }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="chart-comuna">Comuna</label>
+                {% include 'partials/comuna_busqueda.html' with campo_id='chart-comuna' campo_nombre='chart_comuna' placeholder='Todas las comunas' region_select='chart-region' %}
+            </div>
+            <div class="filter-group">
+                <label for="chart-periodo">Período</label>
+                <select class="form-select" id="chart-periodo">
+                    <option value="hoy">Hoy</option>
+                    <option value="7">Últimos 7 días</option>
+                    <option value="30" selected>Últimos 30 días</option>
+                </select>
+            </div>
+        </div>
+
+        <p id="charts-empty" class="text-secondary mb-4" role="status" hidden>
+            No hay mediciones para la ubicación y el período seleccionados.
+        </p>
+
+        <!-- Cuadrícula 2x2 para los gráficos -->
+        <div class="row g-4">
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+                    <h5 class="text-center fw-bold text-secondary mb-3"><i class="bi bi-droplet-half text-primary"></i> Evolución del pH</h5>
+                    <canvas id="chartPH"></canvas>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+                    <h5 class="text-center fw-bold text-secondary mb-3"><i class="bi bi-lightning-charge text-warning"></i> Conductividad Eléctrica (mS/cm)</h5>
+                    <canvas id="chartCond"></canvas>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+                    <h5 class="text-center fw-bold text-secondary mb-3"><i class="bi bi-water text-info"></i> Sólidos Disueltos Totales (ppm)</h5>
+                    <canvas id="chartTDS"></canvas>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+                    <h5 class="text-center fw-bold text-secondary mb-3"><i class="bi bi-thermometer-half text-danger"></i> Temperatura (°C)</h5>
+                    <canvas id="chartTemp"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content-section map-section" id="mapa-alertas" aria-labelledby="map-title">
+    <div class="container">
+        <div class="section-heading">
+            <div class="kicker">Todo Chile</div>
+            <h2 id="map-title">Mapa de alertas en tiempo real</h2>
+            <p>Filtra por región, comuna y período para explorar las mediciones registradas en el país.</p>
+        </div>
+
+        <div class="map-shell">
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label for="mapa-region">Región</label>
+                    <select class="form-select" id="mapa-region">
+                        <option value="" selected>Todas las regiones</option>
+                        {% for codigo, nombre in regiones %}<option value="{{ codigo }}">{{ nombre }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="mapa-comuna">Comuna</label>
+                    {% include 'partials/comuna_busqueda.html' with campo_id='mapa-comuna' campo_nombre='mapa_comuna' placeholder='Todas las comunas' region_select='mapa-region' %}
+                </div>
+                <div class="filter-group">
+                    <label for="periodo">Período</label>
+                    <select class="form-select" id="periodo">
+                        <option value="hoy" selected>Hoy</option>
+                        <option value="7">Últimos 7 días</option>
+                        <option value="30">Últimos 30 días</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="map-layout">
+                <div id="mapa-calor" style="height: 450px; width: 100%; border-radius: 8px; border: 2px solid #dee2e6; z-index: 1; margin-bottom: 20px;"></div>
+                <p id="mapa-vacio" class="text-secondary text-center mb-3" role="status" hidden>No hay mediciones para la ubicación y el período seleccionados.</p>
+            </div>
+        </div>
+    </div>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<!-- Importamos Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{{ datos_graficos|json_script:"datos-graficos" }}
+
+<script>
+// ---------- Filtros de ubicación compartidos por los gráficos y el mapa ----------
+// Une un select de región con el buscador de comunas y avisa con alCambiar() cuando cambia algo.
+// Devuelve una función que entrega el filtro vigente: { region: '13', comuna: '13101' }.
+function conectarUbicacion(selectRegion, inputComuna, alCambiar) {
+    const raiz = inputComuna.closest('[data-comuna-busqueda]');
+    const campoCodigo = raiz.querySelector('[data-comuna-codigo]');
+
+    // Algunos navegadores restauran valores anteriores al recargar.
+    selectRegion.value = '';
+    inputComuna.value = '';
+    campoCodigo.value = '';
+
+    // Al cambiar de región se limpia la comuna; si no, la comuna seguiría mandando sobre la región.
+    // "comuna:reset" reinicia el estado interno del buscador sin abrir su lista.
+    selectRegion.addEventListener('change', function () {
+        inputComuna.value = '';
+        campoCodigo.value = '';
+        inputComuna.dispatchEvent(new CustomEvent('comuna:reset'));
+        alCambiar();
+    });
+
+    // Elegir una sugerencia: el buscador emite "comuna:selected" con la fila del catálogo.
+    inputComuna.addEventListener('comuna:selected', function (evento) {
+        if (evento.detail && evento.detail.codigo_region) {
+            selectRegion.value = evento.detail.codigo_region;
+        }
+        alCambiar();
+    });
+
+    // Borrar el texto vuelve a "todas las comunas" (de la región elegida, si hay una).
+    inputComuna.addEventListener('input', function () {
+        if (!inputComuna.value.trim()) alCambiar();
+    });
+
+    return function () {
+        return {
+            region: selectRegion.value,
+            comuna: inputComuna.value.trim() ? campoCodigo.value : ''
+        };
+    };
+}
+
+// Si hay comuna manda la comuna; si no, la región; si no hay nada, entra todo.
+function coincideUbicacion(medicion, filtro) {
+    if (filtro.comuna) return medicion.comuna_codigo === filtro.comuna;
+    if (filtro.region) return medicion.region === filtro.region;
+    return true;
+}
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const mediciones = JSON.parse(document.getElementById('datos-graficos').textContent);
+    const periodoFiltro = document.getElementById('chart-periodo');
+    const avisoSinDatos = document.getElementById('charts-empty');
+
+    // Algunos navegadores restauran el valor anterior del select al recargar.
+    periodoFiltro.value = '30';
+
+    const obtenerUbicacion = conectarUbicacion(
+        document.getElementById('chart-region'),
+        document.getElementById('chart-comuna'),
+        actualizarGraficos
+    );
+
+    const opcionesComunes = {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { x: { ticks: { maxTicksLimit: 8 } } },
+        elements: { point: { radius: 3, hoverRadius: 5 } }
+    };
+    const definiciones = [
+        ['chartPH', 'ph', 'pH', '#0d6efd', 'rgba(13, 110, 253, 0.1)'],
+        ['chartCond', 'conductividad', 'Conductividad (mS/cm)', '#ffc107', 'rgba(255, 193, 7, 0.1)'],
+        ['chartTDS', 'tds', 'TDS (ppm)', '#0dcaf0', 'rgba(13, 202, 240, 0.1)'],
+        ['chartTemp', 'temperatura', 'Temperatura (°C)', '#dc3545', 'rgba(220, 53, 69, 0.1)']
+    ];
+    const graficos = definiciones.map(function (definicion) {
+        return {
+            campo: definicion[1],
+            instancia: new Chart(document.getElementById(definicion[0]), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: definicion[2],
+                        data: [],
+                        borderColor: definicion[3],
+                        backgroundColor: definicion[4],
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: opcionesComunes
+            })
+        };
+    });
+
+    function estaEnPeriodo(fechaTexto, periodo) {
+        const fecha = new Date(fechaTexto);
+        const ahora = new Date();
+        if (Number.isNaN(fecha.getTime())) return false;
+
+        if (periodo === 'hoy') {
+            return fecha.getFullYear() === ahora.getFullYear()
+                && fecha.getMonth() === ahora.getMonth()
+                && fecha.getDate() === ahora.getDate();
+        }
+
+        const limite = new Date(ahora);
+        limite.setDate(ahora.getDate() - Number(periodo));
+        return fecha >= limite && fecha <= ahora;
+    }
+
+    function actualizarGraficos() {
+        const ubicacion = obtenerUbicacion();
+        const periodo = periodoFiltro.value;
+        const filtradas = mediciones.filter(function (medicion) {
+            return coincideUbicacion(medicion, ubicacion) && estaEnPeriodo(medicion.fecha, periodo);
+        });
+        const etiquetas = filtradas.map(function (medicion) { return medicion.etiqueta; });
+
+        graficos.forEach(function (grafico) {
+            grafico.instancia.data.labels = etiquetas;
+            grafico.instancia.data.datasets[0].data = filtradas.map(function (medicion) {
+                return medicion[grafico.campo];
+            });
+            grafico.instancia.update();
+        });
+
+        avisoSinDatos.hidden = filtradas.length > 0;
+    }
+
+    periodoFiltro.addEventListener('change', actualizarGraficos);
+    actualizarGraficos();
+});
+</script>
+
+<!-- Importamos las librerías gratuitas de Leaflet para el mapa -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+{{ puntos_mapa|json_script:"datos-mapa" }}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const puntos = JSON.parse(document.getElementById('datos-mapa').textContent);
+    const CENTRO_INICIAL = [-33.5, -70.65];
+    const map = L.map('mapa-calor').setView(CENTRO_INICIAL, 10);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri', maxZoom: 18
+    }).addTo(map);
+
+    const ALERTAS = {
+        Verde:    { color: '#198754', texto: 'Riesgo bajo',  peso: 0.3 },
+        Amarillo: { color: '#ffc107', texto: 'Riesgo medio', peso: 0.6 },
+        Rojo:     { color: '#dc3545', texto: 'Riesgo alto',  peso: 1.0 }
+    };
+    const SIN_CLASIFICAR = { color: '#6c757d', texto: 'Sin clasificar', peso: 0.1 };
+
+    // El popup se arma con el DOM y textContent: ningún dato se interpreta como HTML.
+    function linea(etiqueta, valor) {
+        const div = document.createElement('div');
+        const b = document.createElement('strong');
+        b.textContent = etiqueta + ' ';
+        div.append(b, document.createTextNode(valor));
+        return div;
+    }
+
+    function crearPopup(p) {
+        const estado = ALERTAS[p.alerta] || SIN_CLASIFICAR;
+        const caja = document.createElement('div');
+        caja.style.minWidth = '190px';
+
+        const titulo = document.createElement('div');
+        titulo.style.cssText = 'font-weight:bold;font-size:15px;margin-bottom:4px';
+        titulo.textContent = p.comuna;
+
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.style.cssText = 'background:' + estado.color + ';color:#fff;display:inline-block;margin-bottom:8px';
+        badge.textContent = estado.texto;
+
+        const fecha = document.createElement('div');
+        fecha.style.cssText = 'font-size:.85rem;color:#6c757d;margin-bottom:8px';
+        fecha.textContent = p.fecha_texto;
+
+        const datos = document.createElement('div');
+        datos.style.cssText = 'font-size:.9rem;line-height:1.5';
+        datos.append(
+            linea('pH:', p.ph), linea('TDS:', p.tds + ' ppm'),
+            linea('Conductividad:', p.conductividad + ' mS/cm'),
+            linea('Temperatura:', p.temperatura + ' °C')
+        );
+        caja.append(titulo, badge, fecha, datos);
+
+        // Solo existe en el JSON si el servidor determinó que quien mira es admin.
+        if (p.registrado_por !== undefined) {
+            const admin = document.createElement('div');
+            admin.style.cssText = 'margin-top:10px;padding:8px;border:1px solid #dee2e6;border-radius:4px;background:#f8f9fa;font-size:.85rem';
+            const cab = document.createElement('strong');
+            cab.textContent = 'Registrado por';
+            admin.appendChild(cab);
+            if (p.registrado_por) {
+                admin.append(
+                    linea('Nombre:', p.registrado_por.nombre),
+                    linea('Correo:', p.registrado_por.correo)
+                );
+                if (p.registrado_por.comuna) admin.appendChild(linea('Comuna:', p.registrado_por.comuna));
+            } else {
+                admin.appendChild(document.createTextNode(' Usuario anónimo'));
+            }
+            caja.appendChild(admin);
+        }
+        if (p.aproximada) {
+            const nota = document.createElement('div');
+            nota.style.cssText = 'margin-top:8px;font-size:.8rem;color:#6c757d';
+            nota.textContent = 'Ubicación aproximada: la medición se registró eligiendo la comuna, sin GPS.';
+            caja.appendChild(nota);
+        }   
+        return caja;
+    }
+
+    const capaCalor = L.heatLayer([], {radius: 45, blur: 30, maxZoom: 13, max: 2.5, minOpacity: 0.4, gradient: { 0.0: '#ffc107', 0.5: '#fd7e14', 1.0: '#dc3545' } }).addTo(map);
+    const capaPuntos = L.layerGroup().addTo(map);
+
+    const filtroPeriodo = document.getElementById("periodo");
+    const obtenerUbicacion = conectarUbicacion(
+        document.getElementById('mapa-region'),
+        document.getElementById('mapa-comuna'),
+        aplicarFiltros
+    );
+
+    function coincidePeriodo(fechaTexto, periodo) {
+        const fecha = new Date(fechaTexto);
+        if (Number.isNaN(fecha.getTime())) return false;
+        const ahora = new Date();
+        if (periodo === "hoy") {
+            return fecha.getFullYear() === ahora.getFullYear()
+                && fecha.getMonth() === ahora.getMonth()
+                && fecha.getDate() === ahora.getDate();
+        }
+        const limite = new Date(ahora);
+        limite.setDate(ahora.getDate() - Number(periodo));
+        return fecha >= limite && fecha <= ahora;
+    }
+
+    const leyenda = L.control({ position: 'bottomright' });
+    leyenda.onAdd = function () {
+        const d = L.DomUtil.create('div');
+        d.style.cssText = 'background:#fff;padding:8px 10px;border-radius:6px;font-size:.8rem;line-height:1.6;box-shadow:0 1px 4px rgba(0,0,0,.3)';
+        d.innerHTML =
+            '<strong>Nivel de riesgo</strong><br>' +
+            '<span style="color:#198754">●</span> Bajo<br>' +
+            '<span style="color:#ffc107">●</span> Medio<br>' +
+            '<span style="color:#dc3545">●</span> Alto<br>' +
+            '<span style="color:#6c757d">◌</span> Borde punteado: ubicación aproximada<br>' +
+            '<small style="color:#6c757d">La mancha de calor muestra<br>concentración de riesgo medio y alto</small>';
+        return d;
+    };
+    leyenda.addTo(map);
+
+    function aplicarFiltros() {
+        const ubicacion = obtenerUbicacion();
+        // Se muestran todas las mediciones de la ubicación elegida dentro del período seleccionado.
+        const visibles = puntos.filter(p =>
+            coincideUbicacion(p, ubicacion) && coincidePeriodo(p.fecha, filtroPeriodo.value)
+        );
+
+        capaPuntos.clearLayers();
+        capaCalor.setLatLngs(visibles.filter(p => p.alerta === 'Amarillo' || p.alerta === 'Rojo').map(p => [p.lat, p.lng, (ALERTAS[p.alerta] || SIN_CLASIFICAR).peso]));
+
+        let marcadorElegido = null;
+        const coordenadas = [];
+        visibles.forEach(function (p) {
+            const estado = ALERTAS[p.alerta] || SIN_CLASIFICAR;
+            const marcador = L.circleMarker([p.lat, p.lng], {
+                color: estado.color,
+                fillColor: estado.color,
+                fillOpacity: p.aproximada ? 0.5 : 0.85,
+                dashArray: p.aproximada ? '3 3' : null,
+                radius: 7,
+                weight: 2
+            }).bindPopup(crearPopup(p));
+            capaPuntos.addLayer(marcador);
+            coordenadas.push([p.lat, p.lng]);
+            if (!marcadorElegido) marcadorElegido = marcador;
+        });
+        document.getElementById('mapa-vacio').hidden = visibles.length > 0;
+
+        map.closePopup();
+        if (!coordenadas.length) {
+            map.setView(CENTRO_INICIAL, 10);
+        } else if (ubicacion.comuna && coordenadas.length === 1) {
+            // Una sola medición en la comuna: se acerca y se abre su detalle.
+            map.setView(coordenadas[0], 14);
+            marcadorElegido.openPopup();
+        } else {
+            // Varias mediciones (comuna, región o todo Chile): se encuadran todas.
+            map.fitBounds(coordenadas, { padding: [40, 40], maxZoom: ubicacion.comuna ? 15 : 13 });
+        }
+    }
+
+    filtroPeriodo.addEventListener("change", aplicarFiltros);
+    aplicarFiltros();
+});
+</script>
+
+{% endblock %}

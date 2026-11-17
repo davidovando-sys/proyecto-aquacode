@@ -1,0 +1,66 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load static %}
+
+{% block title %}Monitoreos | Panel AquaCivis{% endblock %}
+{% block admin_title %}Puntos de monitoreo{% endblock %}
+{% block admin_subtitle %}Consulta todos los registros enviados por la comunidad y su nivel de alerta.{% endblock %}
+{% block admin_actions %}<a href="{% url 'medicion' %}" class="btn btn-admin-primary"><i class="bi bi-plus-lg"></i> Agregar medición</a>{% endblock %}
+
+{% block extra_css %}{{ block.super }}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+{% block admin_content %}
+<section class="admin-card comunas-panel" aria-labelledby="comunas-titulo">
+    <div class="admin-card-head"><div><h2 id="comunas-titulo">Monitoreo por comuna</h2><p>{{ con_mediciones }} comunas con mediciones · {{ sin_mediciones }} sin mediciones</p></div></div>
+    <div class="monitoreo-filtros">
+        <div><label for="region-mapa">Región</label><select id="region-mapa" class="form-select"><option value="">Todas las regiones</option>{% for codigo, nombre in regiones %}<option value="{{ codigo }}" {% if codigo == region_seleccionada %}selected{% endif %}>{{ nombre }}</option>{% endfor %}</select></div>
+        <div><label for="buscar-comuna">Buscar comuna en Chile</label>{% include 'partials/comuna_busqueda.html' with campo_id='buscar-comuna' campo_nombre='buscar_comuna' valor=comuna_seleccionada.nombre codigo=comuna_seleccionada.codigo %}</div>
+        <a href="{% url 'admin_mediciones' %}" class="btn btn-outline-secondary mt-4">Ver todas</a>
+    </div>
+    <div id="mapa-comunas" class="mapa-comunas" aria-label="Mapa de comunas de Chile" data-base="{% static 'data/' %}" data-region="{{ region_seleccionada }}" data-comuna="{{ comuna_seleccionada.codigo|default:'' }}"></div>
+    <div class="mapa-leyenda"><span><i style="background:#0088be"></i>Con mediciones</span><span><i style="background:#c6d1da"></i>Sin mediciones</span><span><i style="background:#183b61"></i>Comuna seleccionada</span></div>
+    <p class="mapa-nota" id="mapa-estado" role="status">Selecciona una comuna para consultar sus registros y usuarios. Acerca el mapa para ver sus nombres.</p>
+    <p class="mapa-nota">Cartografía IDE Chile / SUBPESCA, simplificada para visualización. Antártica está disponible mediante el buscador, sin geometría en esta capa.</p>
+    <div class="comunas-resumen"><strong>{% if comuna_seleccionada %}{{ comuna_seleccionada.nombre }}{% elif region_seleccionada %}Región seleccionada{% else %}Todo Chile{% endif %}</strong> · {{ total_mediciones }} mediciones · {{ usuarios_comuna|length }} usuarios aprobados</div>
+</section>
+{% if sin_comuna %}<p class="alert alert-info">{{ sin_comuna }} mediciones antiguas tienen una ubicación pendiente de asociar al catálogo. Se conservan en «Ver todas».</p>{% endif %}
+
+<div class="admin-card" id="mediciones" data-tabla-expandible>
+    <div class="admin-card-head"><div><h2>{% if comuna_seleccionada %}Mediciones de {{ comuna_seleccionada.nombre }}{% else %}Mediciones registradas{% endif %}</h2><p>Mostrando <span data-cantidad-visible>{{ mediciones|slice:":10"|length }}</span> de {{ total_mediciones }} registros, desde el más reciente.</p></div></div>
+    <div class="table-responsive">
+        <table class="table admin-table align-middle mb-0">
+            <thead><tr><th>Ubicación y fecha</th><th>pH</th><th>Conductividad</th><th>TDS</th><th>Temperatura</th><th>Estado</th><th>Usuario</th><th></th></tr></thead>
+            <tbody id="filas-mediciones">
+            {% for medicion in mediciones %}
+                <tr{% if forloop.counter > 10 %} data-fila-extra hidden{% endif %}>
+                    <td><strong><i class="bi bi-geo-alt"></i> {{ medicion.ubicacion }}</strong><small class="d-block">{{ medicion.fecha_registro|date:'d/m/Y H:i' }}</small></td>
+                    <td>{{ medicion.ph }}</td><td>{{ medicion.conductividad }} mS/cm</td><td>{{ medicion.tds }} ppm</td><td>{{ medicion.temperatura }} °C</td>
+                    <td><span class="status-pill {% if medicion.alerta_general == 'Verde' %}success{% elif medicion.alerta_general == 'Amarillo' %}warning{% else %}danger{% endif %}">{{ medicion.alerta_general }}</span></td>
+                    <td>{{ medicion.usuario.first_name|default:'Sin usuario' }}</td>
+                    <td><form method="post" action="{% url 'eliminar_medicion' medicion.id %}" onsubmit="return confirm('¿Eliminar esta medición?');">{% csrf_token %}<button class="icon-button danger" type="submit" aria-label="Eliminar medición"><i class="bi bi-trash"></i></button></form></td>
+                </tr>
+            {% empty %}<tr><td colspan="8"><div class="admin-empty"><i class="bi bi-geo-alt"></i><strong>Esta selección todavía no tiene mediciones</strong><span>Los nuevos registros aparecerán aquí.</span></div></td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if total_mediciones > 10 %}
+    <div class="p-3 text-center">
+        <button type="button" class="btn btn-admin-primary" data-expandir-tabla data-tipo="mediciones" aria-expanded="false" aria-controls="filas-mediciones">Ver más mediciones</button>
+    </div>
+    {% endif %}
+</div>
+<section class="admin-card mt-4" id="usuarios-comuna" data-tabla-expandible>
+    <div class="admin-card-head"><div><h2>Usuarios{% if comuna_seleccionada %} de {{ comuna_seleccionada.nombre }}{% endif %}</h2><p>Cuentas aprobadas según su comuna de monitoreo, aunque todavía no tengan mediciones.</p><p>Mostrando <span data-cantidad-visible>{{ usuarios_comuna|slice:":10"|length }}</span> de {{ usuarios_comuna|length }} usuarios.</p></div></div>
+    <div class="table-responsive"><table class="table admin-table"><thead><tr><th>Nombre</th><th>Correo</th><th>Comuna de monitoreo</th><th>Cuenta</th><th></th></tr></thead><tbody id="filas-usuarios">
+    {% for persona in usuarios_comuna %}<tr{% if forloop.counter > 10 %} data-fila-extra hidden{% endif %}><td>{{ persona.nombre }}</td><td>{{ persona.email }}</td><td>{{ persona.comuna }}</td><td>{% if persona.activo %}Activa{% else %}Inactiva / bloqueada{% endif %}</td><td><a class="status-pill info admin-user-link" href="{% url 'ver_usuario' persona.solicitud_id %}">Ver usuario</a></td></tr>
+    {% empty %}<tr><td colspan="5"><div class="admin-empty">No hay usuarios aprobados en esta selección.</div></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% if usuarios_comuna|length > 10 %}<div class="p-3 text-center"><button type="button" class="btn btn-admin-primary" data-expandir-tabla data-tipo="usuarios" aria-expanded="false" aria-controls="filas-usuarios">Ver más usuarios</button></div>{% endif %}
+</section>
+{{ resumen_comunas|json_script:'resumen-comunas' }}
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'js/tablas_expandibles.js' %}"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/mapa_comunas.js' %}?v=20261103-labels"></script>
+{% endblock %}

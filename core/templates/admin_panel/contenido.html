@@ -1,0 +1,18 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}Contenido | Panel AquaCivis{% endblock %}
+{% block admin_title %}Contenido web{% endblock %}
+{% block admin_subtitle %}Mantén los textos principales de AquaCivis organizados desde un solo lugar.{% endblock %}
+
+{% block admin_content %}
+<form method="post" class="admin-card admin-form content-form">{% csrf_token %}
+    {% for campo in formulario %}
+    <div class="form-field content-field">
+        <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+        {{ campo }}
+        <small>{{ campo.help_text }}</small>{{ campo.errors }}
+    </div>
+    {% endfor %}
+    <div class="admin-form-footer"><span><i class="bi bi-clock-history"></i> Última actualización: {{ contenido.fecha_actualizacion|date:'d/m/Y H:i' }}</span><button class="btn btn-admin-primary" type="submit"><i class="bi bi-cloud-check"></i> Publicar cambios</button></div>
+</form>
+{% endblock %}

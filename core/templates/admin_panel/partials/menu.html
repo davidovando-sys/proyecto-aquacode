@@ -1,0 +1,25 @@
+<div class="admin-brand">
+    <span class="admin-brand-icon"><i class="bi bi-shield-check"></i></span>
+    <span><strong>Panel Admin</strong><small>AquaCivis</small></span>
+</div>
+<nav class="admin-menu" aria-label="Secciones del panel administrativo">
+    <a class="{% if seccion_activa == 'usuarios' %}active{% endif %}" href="{% url 'dashboard_admin' %}">
+        <i class="bi bi-people"></i><span>Gestión de usuarios</span>
+    </a>
+    <a class="{% if seccion_activa == 'mediciones' %}active{% endif %}" href="{% url 'admin_mediciones' %}">
+        <i class="bi bi-geo-alt"></i><span>Puntos de monitoreo</span>
+    </a>
+    <a class="{% if seccion_activa == 'umbrales' %}active{% endif %}" href="{% url 'admin_umbrales' %}">
+        <i class="bi bi-exclamation-triangle"></i><span>Umbrales y alertas</span>
+    </a>
+    <a class="{% if seccion_activa == 'contenido' %}active{% endif %}" href="{% url 'admin_contenido' %}">
+        <i class="bi bi-file-earmark-text"></i><span>Contenido web</span>
+    </a>
+    <a class="{% if seccion_activa == 'descargas' %}active{% endif %}" href="{% url 'admin_descargas' %}">
+        <i class="bi bi-download"></i><span>Descarga de datos</span>
+    </a>
+</nav>
+<div class="admin-sidebar-user">
+    <i class="bi bi-person-circle"></i>
+    <span><strong>{{ request.user.first_name|default:request.user.username }}</strong><small>Administrador</small></span>
+</div>

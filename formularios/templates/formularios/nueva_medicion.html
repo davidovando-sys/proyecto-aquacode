@@ -1,0 +1,676 @@
+{% extends 'base.html' %}
+{% block title %}AquaCivis - Registro de medición{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+/* ---------- Layout: formulario + mapa lado a lado ---------- */
+.measurement-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: stretch;
+}
+
+.measurement-layout > .measurement-card {
+    margin: 0;
+    min-width: 0;
+}
+
+.measurement-layout > aside.measurement-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.measurement-card-header {
+    border-bottom: none;
+}
+
+/* El mapa ocupa todo el alto restante de la tarjeta */
+.measurement-map-body {
+    position: relative;
+    flex: 1;
+    min-height: 420px;
+    margin: 0 16px 16px;
+}
+
+#mapa-ubicacion {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+}
+
+/* En pantallas pequeñas el mapa pasa debajo del formulario */
+@media (max-width: 991.98px) {
+    .measurement-layout {
+        grid-template-columns: 1fr;
+    }
+    .measurement-map-body {
+        min-height: 320px;
+    }
+}
+
+/* ---------- Estado de la ubicación ---------- */
+.measurement-status--ok { color: #198754; font-weight: 700; }
+.measurement-status--error { color: #dc3545; }
+
+/* ---------- Modal de resultados ---------- */
+#modalMedicion .modal-content { border: 1px solid #d7e3ec; border-radius: 18px; color: #19364d; overflow: hidden; }
+#modalMedicion .modal-header { align-items: flex-start; padding: 20px 22px 10px; border-bottom: 0; }
+#modalMedicion .modal-title { font-size: 1.15rem; }
+#modalMedicion .result-subtitle { font-size: .82rem; color: #728194; margin: 3px 0 0; }
+#modalMedicion .modal-body { padding: 8px 22px 18px; }
+#modalMedicion .result-overview { background: #edf5fb; padding: 16px; border-radius: 12px; margin-bottom: 18px; }
+#modalMedicion .result-overview p { font-size: .85rem; color: #526b80; line-height: 1.5; }
+#modalMedicion .parameter-card { border: 1px solid #d7e3ec; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+#modalMedicion .parameter-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: .85rem; }
+#modalMedicion .parameter-value { font-size: 1.1rem; font-weight: 700; margin: 3px 0; }
+#modalMedicion .parameter-info summary { cursor: pointer; list-style: none; font-size: .8rem; color: #087aab; }
+#modalMedicion .parameter-info summary::-webkit-details-marker { display: none; }
+#modalMedicion .parameter-info summary:focus-visible { outline: 2px solid #087aab; outline-offset: 3px; }
+#modalMedicion .parameter-info .info-hide, #modalMedicion .parameter-info[open] .info-show { display: none; }
+#modalMedicion .parameter-info[open] .info-hide { display: inline; }
+#modalMedicion .parameter-info p { margin: 8px 0 0; padding: 12px; background: #edf5fb; border-radius: 8px; color: #526b80; font-size: .85rem; line-height: 1.5; }
+#modalMedicion .modal-footer { padding: 12px 22px; }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<section class="measurement-page" aria-labelledby="measurement-title">
+    <div class="container">
+
+        <header class="history-page-header">
+            <nav class="history-breadcrumb" aria-label="Ruta de navegación">
+                <a href="{% url 'home' %}">Inicio</a>
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                <span aria-current="page">Registro de medición</span>
+            </nav>
+            <div class="kicker">Monitoreo ciudadano</div>
+            <h1 id="measurement-title">Registro de medición</h1>
+            <p>Ingresa los datos obtenidos para calcular el índice de calidad del agua.</p>
+        </header>
+
+        <div class="measurement-layout">
+
+            <!-- Formulario -->
+            <section class="card measurement-card" aria-labelledby="form-title">
+                <div class="measurement-card-header">
+                    <h2 id="form-title">Datos de la medición</h2>
+                    <p>Completa todos los campos con los valores que entrega tu instrumento.</p>
+                </div>
+
+                <div class="measurement-card-body">
+                    <form method="POST" action="" class="measurement-form" id="form-medicion">
+                        {% csrf_token %}
+                        <input type="hidden" name="latitud" id="latitud_input">
+                        <input type="hidden" name="longitud" id="longitud_input">
+                        {# Cómo se definió la ubicación: gps | pin_manual | comuna_seleccionada #}
+                        <input type="hidden" name="origen_ubicacion" id="origen_ubicacion_input" value="gps">
+
+                        <div class="row g-3">
+
+                            <div class="col-12">
+                                <label for="ubicacion" class="form-label fw-bold">Ubicación (Comuna/Zona)</label>
+                                {% include 'partials/comuna_busqueda.html' with campo_id='ubicacion' campo_nombre='ubicacion' requerido=True valor=request.POST.ubicacion codigo=request.POST.comuna_codigo %}
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="ph" class="form-label">
+                                    pH
+                                    <i class="bi bi-info-circle text-primary" tabindex="0" data-bs-toggle="tooltip"
+                                       data-bs-placement="top" title="{{ config.ph.texto_informativo }}"></i>
+                                </label>
+                                <input type="number" min="{{ config.ph.valor_min|stringformat:'0.2f' }}"
+                                       max="{{ config.ph.valor_max|stringformat:'0.2f' }}" step="0.01"
+                                       class="form-control" id="ph" name="ph" inputmode="decimal"
+                                       placeholder="Ingrese el valor de pH" required>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="conductividad" class="form-label">
+                                    Conductividad (mS/cm)
+                                    <i class="bi bi-info-circle text-primary" tabindex="0" data-bs-toggle="tooltip"
+                                       data-bs-placement="top" title="{{ config.conductividad.texto_informativo }}"></i>
+                                </label>
+                                <input type="number" min="{{ config.conductividad.valor_min|stringformat:'0.2f' }}"
+                                       max="{{ config.conductividad.valor_max|stringformat:'0.2f' }}" step="0.01"
+                                       class="form-control" id="conductividad" name="conductividad" inputmode="decimal"
+                                       placeholder="Ingrese el valor de conductividad" required>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="tds" class="form-label">
+                                    Total de Sólidos Disueltos (TDS) (ppm)
+                                    <i class="bi bi-info-circle text-primary" tabindex="0" data-bs-toggle="tooltip"
+                                       data-bs-placement="top" title="{{ config.tds.texto_informativo }}"></i>
+                                </label>
+                                <input type="number" min="{{ config.tds.valor_min|stringformat:'0.2f' }}"
+                                       max="{{ config.tds.valor_max|stringformat:'0.2f' }}" step="0.01"
+                                       class="form-control" id="tds" name="tds" inputmode="decimal"
+                                       placeholder="Ingrese el valor de TDS" required>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="temperatura" class="form-label">
+                                    Temperatura (°C)
+                                    <i class="bi bi-info-circle text-primary" tabindex="0" data-bs-toggle="tooltip"
+                                       data-bs-placement="top" title="{{ config.temperatura.texto_informativo }}"></i>
+                                </label>
+                                <input type="number" min="{{ config.temperatura.valor_min|stringformat:'0.2f' }}"
+                                       max="{{ config.temperatura.valor_max|stringformat:'0.2f' }}" step="0.01"
+                                       class="form-control" id="temperatura" name="temperatura" inputmode="decimal"
+                                       placeholder="Ingrese la temperatura" required>
+                            </div>
+
+                        </div><!-- /row -->
+
+                        <div class="measurement-actions">
+                            <a href="{% url 'home' %}" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-primary">Guardar Medición</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Mapa -->
+            <aside class="card measurement-card" aria-labelledby="map-title">
+                <div class="measurement-card-header">
+                    <h2 id="map-title">Ubicación actual</h2>
+                    <p id="estado-ubicacion" role="status">Detectando tu ubicación...</p>
+                    <p class="mb-0 mt-1 fw-semibold" id="direccion-pin" aria-live="polite" hidden>
+                        <i class="bi bi-geo-alt-fill text-danger me-1" aria-hidden="true"></i><span id="direccion-texto"></span>
+                    </p>
+                    <p class="small text-secondary mb-0 mt-1">Arrastra el pin o haz clic en el mapa para ajustar la ubicación exacta.</p>
+                    <button type="button" class="btn btn-outline-aquacivis btn-sm rounded-pill mt-2" id="btn-mi-ubicacion">
+                        <i class="bi bi-crosshair me-1" aria-hidden="true"></i> Usar mi ubicación actual
+                    </button>
+                </div>
+                <div class="measurement-map-body">
+                    <div id="mapa-ubicacion" role="img" aria-label="Mapa con tu ubicación actual"></div>
+                </div>
+            </aside>
+
+        </div><!-- /measurement-layout -->
+    </div>
+</section>
+
+<!-- Modal de resultados de la medición -->
+<div class="modal fade" id="modalMedicion" tabindex="-1"
+     aria-labelledby="modalMedicionLabel" aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <!-- Encabezado -->
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold" id="modalMedicionLabel">Resultado de la medición</h5>
+                    <p class="result-subtitle">Resumen del estado del agua y sus parámetros.</p>
+                </div>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <!-- Contenido -->
+            <div class="modal-body">
+
+                <!-- ESTADO GENERAL -->
+                {% if estado_general %}
+                <section class="result-overview" aria-label="Estado general de la medición">
+                    <div class="small fw-bold mb-2">Estado del agua</div>
+
+                    <div class="d-flex align-items-center gap-2 mb-2 text-{{ estado_general.color }}">
+                        <i class="bi {{ estado_general.icono }} fs-4"></i>
+                        <h5 class="fw-bold mb-0">Riesgo {{ estado_general.nivel }}</h5>
+                    </div>
+
+                    <p class="mb-0">
+                        {% if estado_general.nivel == "Alto" %}
+                            Se detectaron parámetros fuera de los
+                            límites críticos configurados.
+                            Se recomienda verificar las mediciones.
+                        {% elif estado_general.nivel == "Medio" %}
+                            Uno o más parámetros superan los umbrales
+                            preventivos. Se recomienda continuar
+                            monitoreando la calidad del agua.
+                        {% elif estado_general.nivel == "Bajo" %}
+                            Los parámetros evaluados se encuentran
+                            dentro de los umbrales configurados.
+                        {% else %}
+                            No fue posible determinar el estado general.
+                        {% endif %}
+                    </p>
+                </section>
+                {% endif %}
+
+                <!-- DETALLE INDIVIDUAL -->
+                <h6 class="fw-bold mb-3">Detalle de parámetros</h6>
+
+                {% for alerta in alertas %}
+                <article class="parameter-card">
+                    <div class="parameter-heading">
+                        <strong>{{ alerta.parametro }}</strong>
+                        <span class="badge bg-{{ alerta.color }} {% if alerta.color == 'warning' %}text-dark{% endif %}">
+                            <i class="bi {{ alerta.icono }} me-1" aria-hidden="true"></i>
+                            {% if alerta.nivel == 'Error' %}Error{% else %}Riesgo {{ alerta.nivel }}{% endif %}
+                        </span>
+                    </div>
+                    {% if alerta.valor != None %}<div class="parameter-value">{{ alerta.valor|floatformat:2 }} {{ alerta.unidad }}</div>{% endif %}
+                    <details class="parameter-info">
+                        <summary>
+                            <span class="info-show">Ver más información <i class="bi bi-chevron-down" aria-hidden="true"></i></span>
+                            <span class="info-hide">Ocultar información <i class="bi bi-chevron-up" aria-hidden="true"></i></span>
+                            <span class="visually-hidden"> sobre {{ alerta.parametro }}</span>
+                        </summary>
+                        <p>{{ alerta.mensaje }}</p>
+                    </details>
+                </article>
+                {% endfor %}
+
+            </div>
+
+            <!-- Botones -->
+            <div class="modal-footer">
+                <a href="{% url 'home' %}" class="btn btn-secondary">Volver al inicio</a>
+                <a href="{% url 'historial_mediciones' %}" class="btn btn-outline-primary"> Mi historial</a>
+                <a href="{% url 'graficos' %}" class="btn btn-primary">Ver gráficos</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+{# Con "as" el tag no lanza error si el nombre de la URL no existe: devuelve vacío y el JS usa el JSON estático. #}
+{% url 'buscar_comunas' as url_buscar_comunas %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    // --- Tooltips de Bootstrap ---
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+
+    // --- Modal de resultado (solo cuando la vista envía alertas) ---
+    {% if alertas %}
+    const modalElemento = document.getElementById("modalMedicion");
+    if (modalElemento) {
+        bootstrap.Modal.getOrCreateInstance(modalElemento).show();
+    }
+    {% endif %}
+
+    // --- Utilidades ---
+    const limpiar = (texto) => texto
+        ? String(texto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
+        : "";
+
+    const escapar = (texto) => String(texto).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+
+    // Compara dos nombres de comuna sin distinguir mayúsculas ni tildes.
+    // Es una igualdad exacta a propósito: con comunas de todo Chile, la inclusión daba falsos positivos
+    // (p. ej. "San Pedro" vs "San Pedro de la Paz").
+    function mismaComuna(a, b) {
+        const x = limpiar(a);
+        return !!x && x === limpiar(b);
+    }
+
+    const inputLat = document.getElementById('latitud_input');
+    const inputLng = document.getElementById('longitud_input');
+    const inputOrigen = document.getElementById('origen_ubicacion_input');
+    const btnMiUbicacion = document.getElementById('btn-mi-ubicacion');
+    const textoEstado = document.getElementById('estado-ubicacion');
+    const CENTRO_SANTIAGO = [-33.4489, -70.6693];
+
+    function mostrarEstado(texto, clase) {
+        if (!textoEstado) return;
+        textoEstado.textContent = texto;
+        textoEstado.classList.remove('measurement-status--ok', 'measurement-status--error');
+        if (clase) textoEstado.classList.add(clase);
+    }
+
+    // --- Mapa con pin arrastrable ---
+    // El pin parte en la ubicación GPS real y se puede mover (arrastrándolo o haciendo clic en el mapa).
+    // Latitud y longitud se guardan siempre desde la posición actual del pin.
+    let mapaFormulario = null;
+    let pin = null;
+
+    if (document.getElementById('mapa-ubicacion')) {
+        mapaFormulario = L.map('mapa-ubicacion').setView(CENTRO_SANTIAGO, 10);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri',
+            maxZoom: 18
+        }).addTo(mapaFormulario);
+
+        // Evita que el mapa se vea cortado o gris cuando el layout termina de calcularse
+        setTimeout(() => mapaFormulario.invalidateSize(), 200);
+        window.addEventListener('resize', () => mapaFormulario.invalidateSize());
+    }
+
+    // --- Dirección del pin (solo informativa; no se envía ni se guarda) ---
+    const contenedorDireccion = document.getElementById('direccion-pin');
+    const textoDireccion = document.getElementById('direccion-texto');
+    let temporizadorDireccion = null;
+    let controladorDireccion = null;
+
+    function formatearDireccion(datos) {
+        const a = (datos && datos.address) || {};
+        const calle = a.road || a.pedestrian || a.footway || a.path || '';
+        const principal = [calle, a.house_number || ''].filter(Boolean).join(' ');
+        const sector = a.suburb || a.neighbourhood || a.city_district || a.municipality || a.city || a.town || a.village || '';
+        const partes = [principal, sector].filter(Boolean);
+        if (partes.length) return partes.join(', ');
+        return datos && datos.display_name ? datos.display_name.split(',').slice(0, 3).join(',').trim() : '';
+    }
+
+    function actualizarDireccion(lat, lng) {
+        if (!contenedorDireccion || !textoDireccion) return;
+        contenedorDireccion.hidden = false;
+        textoDireccion.textContent = 'Buscando dirección...';
+
+        // Espera a que el pin deje de moverse y cancela la consulta anterior (Nominatim limita a 1 consulta por segundo).
+        clearTimeout(temporizadorDireccion);
+        if (controladorDireccion) controladorDireccion.abort();
+
+        temporizadorDireccion = setTimeout(async function () {
+            controladorDireccion = new AbortController();
+            try {
+                const respuesta = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=es&lat=${lat}&lon=${lng}`,
+                    { signal: controladorDireccion.signal }
+                );
+                if (!respuesta.ok) throw new Error('Nominatim no respondió');
+                const datos = await respuesta.json();
+                textoDireccion.textContent = formatearDireccion(datos) || 'No encontramos una dirección para este punto.';
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+                textoDireccion.textContent = 'No se pudo obtener la dirección de este punto.';
+            }
+        }, 700);
+    }
+
+    function fijarCoordenadas(lat, lng) {
+        inputLat.value = lat.toFixed(6);
+        inputLng.value = lng.toFixed(6);
+        actualizarDireccion(inputLat.value, inputLng.value);
+    }
+
+    // Crea el pin si no existe (o lo mueve) y actualiza los campos ocultos.
+    function colocarPin(lat, lng, centrar, zoom) {
+        if (!mapaFormulario) return;
+
+        if (!pin) {
+            pin = L.marker([lat, lng], {
+                draggable: true,
+                autoPan: true,
+                title: 'Arrastra el pin para ajustar la ubicación'
+            }).addTo(mapaFormulario);
+
+            pin.on('dragend', function () {
+                const posicion = pin.getLatLng();
+                fijarCoordenadas(posicion.lat, posicion.lng);
+                inputOrigen.value = 'pin_manual';
+                mostrarEstado('Ubicación ajustada manualmente.', 'measurement-status--ok');
+            });
+        } else {
+            pin.setLatLng([lat, lng]);
+        }
+
+        fijarCoordenadas(lat, lng);
+        if (centrar) mapaFormulario.setView([lat, lng], zoom || mapaFormulario.getZoom());
+    }
+
+    // Un clic en el mapa mueve el pin a ese punto.
+    if (mapaFormulario) {
+        mapaFormulario.on('click', function (evento) {
+            colocarPin(evento.latlng.lat, evento.latlng.lng, false);
+            inputOrigen.value = 'pin_manual';
+            mostrarEstado('Ubicación ajustada manualmente.', 'measurement-status--ok');
+        });
+    }
+
+    // --- Captura del GPS: coloca el pin en la ubicación real ---
+    function detectarUbicacion() {
+        if (!("geolocation" in navigator)) {
+            mostrarEstado('Tu navegador no permite detectar la ubicación. Haz clic en el mapa para colocar el pin.', 'measurement-status--error');
+            return;
+        }
+
+        mostrarEstado('Detectando tu ubicación...');
+        if (btnMiUbicacion) btnMiUbicacion.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                colocarPin(position.coords.latitude, position.coords.longitude, true, 16);
+                inputOrigen.value = 'gps';
+                const precision = Math.round(position.coords.accuracy || 0);
+                mostrarEstado(
+                    'Ubicación GPS fijada' + (precision ? ' (precisión aprox. ±' + precision + ' m)' : '') +
+                    '. Arrastra el pin si necesitas más precisión.',
+                    'measurement-status--ok'
+                );
+                if (btnMiUbicacion) btnMiUbicacion.disabled = false;
+            },
+            function () {
+                console.warn("GPS denegado o no disponible.");
+                mostrarEstado('No se pudo detectar el GPS. Haz clic en el mapa para colocar el pin.', 'measurement-status--error');
+                if (btnMiUbicacion) btnMiUbicacion.disabled = false;
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+
+    if (btnMiUbicacion) btnMiUbicacion.addEventListener('click', detectarUbicacion);
+    detectarUbicacion();
+
+    // --- Envío del formulario ---
+    // La comparación entre la comuna elegida y la ubicación del pin NO bloquea el envío:
+    // si no coinciden, la persona decide qué comuna usar.
+    const form = document.getElementById("form-medicion");
+    if (!form) return;
+
+    const btnSubmit = form.querySelector('button[type="submit"]');
+    const textoOriginalBtn = btnSubmit ? btnSubmit.innerHTML : '';
+
+    function restaurarBoton() {
+        if (!btnSubmit) return;
+        btnSubmit.innerHTML = textoOriginalBtn;
+        btnSubmit.disabled = false;
+    }
+
+    function enviarFormulario() {
+        if (window.mostrarPantallaCarga) {
+            window.mostrarPantallaCarga('Guardando tu medición...');
+        }
+        form.submit(); // form.submit() no dispara de nuevo el evento "submit"
+    }
+
+    // --- Catálogo de comunas (el mismo JSON que usa el buscador) ---
+    // Se tolera más de una forma de JSON: lista de objetos, lista de textos,
+    // objetos anidados (p. ej. regiones con comunas) o un mapa código -> nombre.
+    let catalogoComunas = null;
+
+    function recolectarComunas(nodo, salida) {
+        if (typeof nodo === 'string') {
+            salida.push({ nombre: nodo, codigo: '' });
+        } else if (Array.isArray(nodo)) {
+            nodo.forEach(item => recolectarComunas(item, salida));
+        } else if (nodo && typeof nodo === 'object') {
+            const nombre = nodo.nombre || nodo.name || nodo.comuna || nodo.label;
+            if (typeof nombre === 'string') {
+                const codigo = nodo.codigo ?? nodo.code ?? nodo.cut ?? nodo.id ?? '';
+                salida.push({ nombre: nombre, codigo: String(codigo) });
+            }
+            Object.entries(nodo).forEach(([clave, valor]) => {
+                if (typeof valor === 'string' && !nombre) {
+                    salida.push({ nombre: valor, codigo: clave }); // mapa código -> nombre
+                } else if (valor && typeof valor === 'object') {
+                    recolectarComunas(valor, salida);
+                }
+            });
+        }
+        return salida;
+    }
+
+    async function cargarCatalogoComunas() {
+        if (catalogoComunas) return catalogoComunas;
+        const contenedor = document.querySelector('[data-comuna-busqueda]');
+        const url = contenedor && contenedor.dataset.url;
+        if (!url) return [];
+        try {
+            const respuesta = await fetch(url);
+            if (!respuesta.ok) throw new Error('No se pudo cargar el catálogo de comunas');
+            catalogoComunas = recolectarComunas(await respuesta.json(), []);
+        } catch (error) {
+            console.warn(error);
+            catalogoComunas = [];
+        }
+        return catalogoComunas;
+    }
+
+    // Resuelve contra el catálogo la comuna a la que pertenece el pin.
+    // Recibe los nombres del geocodificador ordenados de más a menos específico
+    // y devuelve la primera que sea una comuna real del catálogo (nombre y código).
+    async function buscarComunaEnCatalogo(nombres) {
+        const unicos = [...new Set(nombres.map(n => String(n).trim()).filter(Boolean))];
+        if (!unicos.length) return null;
+
+        // 1) Endpoint de la base de datos (mismos nombres y códigos que valida la vista)
+        const URL_BUSCAR_COMUNAS = "{{ url_buscar_comunas }}";
+        if (URL_BUSCAR_COMUNAS) {
+            try {
+                const listas = await Promise.all(unicos.map(async function (nombre) {
+                    const respuesta = await fetch(`${URL_BUSCAR_COMUNAS}?q=${encodeURIComponent(nombre)}`);
+                    if (!respuesta.ok) throw new Error('buscar_comunas respondió ' + respuesta.status);
+                    const datos = await respuesta.json();
+                    return (datos.results || []).map(c => ({ nombre: c.nombre, codigo: String(c.codigo) }));
+                }));
+                for (let i = 0; i < unicos.length; i++) {
+                    const exacta = listas[i].find(c => mismaComuna(c.nombre, unicos[i]));
+                    if (exacta) return exacta;
+                }
+                return null;
+            } catch (error) {
+                console.warn('No se pudo consultar buscar_comunas; se usa el JSON estático.', error);
+            }
+        }
+
+        // 2) Respaldo: catálogo JSON estático
+        const catalogo = await cargarCatalogoComunas();
+        for (const nombre of unicos) {
+            const exacta = catalogo.find(c => mismaComuna(c.nombre, nombre));
+            if (exacta) return exacta;
+        }
+        return null;
+    }
+
+    const codigoCompleto = (codigo) => String(codigo || '').trim().padStart(5, '0');
+
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        // Sin coordenadas no se puede continuar: se pide fijar el pin.
+        if (!inputLat.value || !inputLng.value) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Falta la ubicación',
+                text: 'Aún no tenemos tu ubicación. Permite el acceso al GPS en tu navegador o haz clic en el mapa para colocar el pin antes de guardar.',
+                confirmButtonColor: '#0d6efd'
+            });
+            return;
+        }
+
+        const campoComuna = document.getElementById("ubicacion");
+        const campoCodigo = document.querySelector('[data-comuna-codigo]');
+        const valorElegido = campoComuna ? campoComuna.value.trim() : '';
+        const codigoElegido = campoCodigo ? campoCodigo.value.trim() : '';
+
+        btnSubmit.innerHTML = "Verificando ubicación...";
+        btnSubmit.disabled = true;
+
+        // Comuna del pin. Si algo falla o no se puede determinar, no se bloquea: se guarda igual.
+        let comunaGPS = null;
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&accept-language=es&lat=${inputLat.value}&lon=${inputLng.value}`
+            );
+            if (!response.ok) throw new Error("Error en los servidores de OpenStreetMap");
+            const data = await response.json();
+            const direccion = data.address || {};
+
+            // Ordenados de más a menos específico. No se incluye "county" (p. ej. "Provincia de Santiago"),
+            // porque no es una comuna y daba falsos positivos.
+            const candidatosComuna = [
+                direccion.municipality,
+                direccion.city_district,
+                direccion.borough,
+                direccion.suburb,
+                direccion.town,
+                direccion.village,
+                direccion.locality,
+                direccion.city
+            ].filter(Boolean);
+
+            comunaGPS = await buscarComunaEnCatalogo(candidatosComuna);
+        } catch (error) {
+            console.warn("No se pudo verificar la comuna del pin; se guarda sin verificar.", error);
+            enviarFormulario();
+            return;
+        }
+
+        // Sin comuna elegida o sin comuna reconocida para el pin: no hay nada que comparar.
+        if (!valorElegido || !comunaGPS) {
+            enviarFormulario();
+            return;
+        }
+
+        // Se compara por código cuando ambos lo tienen; si no, por nombre.
+        const coincide = (codigoElegido && comunaGPS.codigo)
+            ? codigoCompleto(codigoElegido) === codigoCompleto(comunaGPS.codigo)
+            : mismaComuna(valorElegido, comunaGPS.nombre);
+        if (coincide) {
+            enviarFormulario();
+            return;
+        }
+
+        // No coincide: la persona decide.
+        const resultado = await Swal.fire({
+            icon: 'question',
+            title: '¿Qué comuna quieres registrar?',
+            html:
+                `La ubicación del pin corresponde a <strong>${escapar(comunaGPS.nombre)}</strong>, ` +
+                `pero seleccionaste <strong>${escapar(valorElegido)}</strong>.<br><br>` +
+                `Si estás ingresando los datos desde otro lugar, puedes mantener la comuna elegida.`,
+            confirmButtonText: `Usar mi ubicación (${escapar(comunaGPS.nombre)})`,
+            showDenyButton: true,
+            denyButtonText: `Usar la comuna elegida (${escapar(valorElegido)})`,
+            showCancelButton: true,
+            cancelButtonText: 'Volver y revisar',
+            confirmButtonColor: '#0d6efd',
+            denyButtonColor: '#6c757d',
+            allowOutsideClick: false
+        });
+
+        if (resultado.isConfirmed) {
+            // Usar la comuna de la ubicación actual
+            campoComuna.value = comunaGPS.nombre;
+            if (campoCodigo) campoCodigo.value = comunaGPS.codigo;
+            enviarFormulario();
+        } else if (resultado.isDenied) {
+            // Mantener la comuna elegida (medición hecha en un lugar distinto al actual)
+            inputOrigen.value = 'comuna_seleccionada';
+            enviarFormulario();
+        } else {
+            restaurarBoton();
+        }
+    });
+});
+</script>
+{% endblock %}

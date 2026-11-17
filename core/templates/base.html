@@ -1,0 +1,246 @@
+{% load static %}
+{% load filtros_texto %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+    <meta name="description" content="AquaCivis, plataforma ciudadana de monitoreo de la calidad del agua potable en Chile.">
+    <title>{% block title %}AquaCivis{% endblock %}</title>
+
+    <!-- Cargar Bootstrap e Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
+    <link rel="icon" type="image/png" href="{% static 'img/logo-aquacivis.png' %}">
+    
+    <!-- CSS Externo (Opcional) -->
+    <link rel="stylesheet" href="{% static 'css/aquacivis.css' %}?v20261103">
+    <link rel="stylesheet" href="{% static 'css/comunas.css' %}?v=20261103-labels">
+    <script defer src="{% static 'js/comunas.js' %}?v=20261103-local-search"></script>
+    {% block extra_css %}{% endblock %}
+
+    <style>
+        /* Colores personalizados */
+        .bg-aquacivis { background-color: #006699; }
+        .text-aquacivis { color: #006699; }
+        .btn-aquacivis { background-color: #0077b6; color: white; font-weight: bold; }
+        .btn-aquacivis:hover { background-color: #023e8a; color: white; }
+        .btn-outline-aquacivis { border: 2px solid #0077b6; color: #0077b6; font-weight: bold; }
+        .btn-outline-aquacivis:hover { background-color: #0077b6; color: white; }
+        .tarjeta-hover:hover { transform: translateY(-5px); transition: 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .footer-bg { background-color: #004a75; } 
+    </style>
+</head>
+
+<body class="bg-light d-flex flex-column min-vh-100">
+
+    <!-- Barra de Navegación -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3 sticky-top" aria-label="Navegación principal">
+        <div class="container">
+            <a class="navbar-brand text-aquacivis fw-bold" href="{% url 'home' %}" aria-label="AquaCivis, ir al inicio">
+                <img src="{% static 'img/logo-aquacivis.png' %}" alt="Logo AquaCivis" height="36" width="auto"> AquaCivis
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Abrir menú de navegación">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mx-lg-auto gap-lg-3">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" data-nav="inicio"
+                           href="{% url 'home' %}"
+                           {% if request.resolver_match.url_name == 'home' %}aria-current="page"{% endif %}>Inicio</a>
+                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'home' %}#que-medimos">¿Qué medimos?</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'home' %}#graficos-evolucion">Evolución</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'home' %}#mapa-alertas">Mapa y Alertas</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'graficos' %}active{% endif %}"
+                           href="{% url 'graficos' %}"
+                           {% if request.resolver_match.url_name == 'graficos' %}aria-current="page"{% endif %}>Historial</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'sobre_nosotros' %}active{% endif %}"
+                           href="{% url 'sobre_nosotros' %}"
+                           {% if request.resolver_match.url_name == 'sobre_nosotros' %}aria-current="page"{% endif %}>Sobre Nosotros</a>
+                    </li>
+                </ul>
+
+                <div class="navbar-actions d-flex flex-wrap flex-lg-nowrap align-items-center gap-2 mt-3 mt-lg-0">
+                    
+                            {% if user.is_authenticated %}
+                        <div class="navbar-user">
+                            <span class="navbar-user-name" title="{{ user.first_name|default:user.username }}">
+                                <i class="bi bi-person-circle" aria-hidden="true"></i>
+
+                                <span class="navbar-user-text">
+                                    <span id="navbar-greeting"></span>{{ user.first_name|default:user.username|primer_nombre }}
+                                </span>
+                            </span>
+                            
+
+                            
+                        {% if user.is_staff and not request.session.vista_usuario %}
+                            <a href="{% url 'dashboard_admin' %}" class="btn btn-dark rounded-pill px-3">Panel Admin</a>
+                        {% endif %}
+
+                        {% if user.is_staff and request.session.vista_usuario %}
+                            <a href="{% url 'desactivar_vista_usuario' %}" class="btn btn-outline-aquacivis rounded-pill px-3">Volver al panel</a>
+                        {% endif %}
+
+                            <form action="{% url 'logout' %}" method="POST" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger rounded-pill px-3 logout-btn" title="Cerrar sesión">
+                                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                                    <span class="logout-label">Cerrar Sesión</span>
+                                </button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <!-- Si NO han iniciado sesión, mostramos los botones por defecto -->
+                        <a href="{% url 'login' %}" class="btn btn-outline-aquacivis rounded-pill px-3">Iniciar Sesión</a>
+                        <a href="{% url 'solicitar_registro' %}" class="btn btn-aquacivis rounded-pill px-3">Registrarse</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenedor dinámico donde irán las vistas -->
+    <main class="flex-grow-1">
+        {% if recordatorio_bloque and request.resolver_match.url_name != 'medicion' %}
+            <div class="container mt-3" id="recordatorio-bloque" data-clave="{% now 'Y-m-d' %}-{{ recordatorio_bloque.nombre }}">
+                <div class="alert alert-info alert-dismissible fade show shadow-sm mb-0 pe-5" role="status">
+                    <i class="bi bi-bell-fill me-2" aria-hidden="true"></i>
+                    Aún no registras tu medición del bloque <strong>{{ recordatorio_bloque.nombre }}</strong>.
+                    Tienes hasta las {{ recordatorio_bloque.fin }}.
+                    <a href="{% url 'medicion' %}" class="btn btn-sm btn-aquacivis rounded-pill px-3 ms-md-2 mt-2 mt-md-0">Registrar ahora</a>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar aviso"></button>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if messages %}
+            <div class="container mt-3">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <div class="loading-screen" id="loading-screen" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
+        <div class="loading-screen-card">
+            <span class="loading-spinner" aria-hidden="true"></span>
+            <strong id="loading-screen-message">Cargando...</strong>
+            <span class="visually-hidden">Por favor, espera.</span>
+        </div>
+    </div>
+
+    {% block footer %}
+        <!-- Footer -->
+        <footer class="footer-bg text-white text-center py-4 mt-auto">
+            <div class="container">
+                <small>© 2026 AquaCivis · Monitorea · Comparte · Protege<br>
+                Plataforma ciudadana de monitoreo de agua potable en Chile</small>
+            </div>
+        </footer>
+    {% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // Muestra una pantalla breve mientras se envían formularios al servidor.
+    (function () {
+        var pantalla = document.getElementById('loading-screen');
+        var mensaje = document.getElementById('loading-screen-message');
+        if (!pantalla || !mensaje) return;
+
+        window.mostrarPantallaCarga = function (texto) {
+            mensaje.textContent = texto || 'Procesando...';
+            pantalla.classList.add('is-visible');
+            pantalla.setAttribute('aria-hidden', 'false');
+        };
+
+        document.querySelectorAll('form[data-loading-message]').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (event.defaultPrevented || !form.checkValidity()) return;
+                if (form.dataset.loadingActive === 'true') {
+                    event.preventDefault();
+                    return;
+                }
+
+                form.dataset.loadingActive = 'true';
+                window.mostrarPantallaCarga(form.dataset.loadingMessage);
+
+            });
+        });
+    })();
+    </script>
+    <script>
+    // Marca en azul, en la barra, la sección de la página en la que estás (Mapa y Alertas, ¿Qué medimos?).
+    // En las páginas que no tienen esas secciones no hace nada.
+    (function () {
+        var enlaces = Array.prototype.slice.call(document.querySelectorAll('.navbar-nav .nav-link[href*="#"]'))
+            .map(function (a) { return { a: a, seccion: document.getElementById(a.hash.slice(1)) }; })
+            .filter(function (x) { return x.seccion; });
+        if (!enlaces.length) return;
+
+        var inicio = document.querySelector('.navbar-nav .nav-link[data-nav="inicio"]');
+        var margen = 100; // alto aproximado de la barra fija
+
+        function marcar(activo) {
+            enlaces.forEach(function (x) {
+                x.a.classList.toggle('active', x === activo);
+                if (x === activo) { x.a.setAttribute('aria-current', 'location'); } else { x.a.removeAttribute('aria-current'); }
+            });
+            if (inicio) {
+                inicio.classList.toggle('active', !activo);
+                if (!activo) { inicio.setAttribute('aria-current', 'page'); } else { inicio.removeAttribute('aria-current'); }
+            }
+        }
+
+        function actualizar() {
+            var activo = null;
+            enlaces.forEach(function (x) {
+                var r = x.seccion.getBoundingClientRect();
+                if (r.top <= margen && r.bottom > margen) activo = x;
+            });
+            // Al llegar al final de la página, queda marcada la última sección visible.
+            if (!activo && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+                enlaces.forEach(function (x) {
+                    if (x.seccion.getBoundingClientRect().top < window.innerHeight) activo = x;
+                });
+            }
+            marcar(activo);
+        }
+
+        window.addEventListener('scroll', actualizar, { passive: true });
+        window.addEventListener('resize', actualizar);
+        actualizar();
+    })();
+    </script>
+    <script>
+    // El aviso del bloque se oculta si lo cierras, hasta que cambie el bloque o el día.
+    (function () {
+        var aviso = document.getElementById('recordatorio-bloque');
+        if (!aviso) return;
+        var clave = 'recordatorio-' + aviso.dataset.clave;
+        try { if (sessionStorage.getItem(clave)) { aviso.remove(); return; } } catch (e) {}
+        aviso.addEventListener('close.bs.alert', function () {
+            try { sessionStorage.setItem(clave, '1'); } catch (e) {}
+        });
+    })();
+    </script>   
+    {% block scripts %}{% endblock %}
+</body>
+</html>

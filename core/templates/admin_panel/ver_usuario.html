@@ -1,0 +1,335 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load static %}
+
+{% block title %}Ver usuario | Panel AquaCivis{% endblock %}
+{% block admin_title %}Detalle del usuario{% endblock %}
+{% block admin_subtitle %}Consulta la información, estado de la cuenta, historial de bloqueos y mediciones registradas.{% endblock %}
+
+{% block admin_actions %}
+<div class="admin-actions">
+    <a href="{% url 'editar_usuario' solicitud.id %}" class="btn btn-admin-primary">
+        <i class="bi bi-pencil-square"></i>
+        Editar usuario
+    </a>
+    {% if request.GET.origen == 'usuarios' %}
+        <a href="{% url 'dashboard_admin' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a usuarios
+        </a>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+{% block admin_content %}
+
+<!-- INFORMACIÓN GENERAL -->
+<section class="admin-card mb-4">
+
+    <div class="admin-card-head">
+        <h2>Información del usuario</h2>
+        <p>Datos personales y configuración de la cuenta.</p>
+    </div>
+
+    <div class="admin-card-body">
+        <div class="user-form-grid">
+
+            <div class="form-field">
+                <label>Nombre</label>
+                <p class="form-control-plaintext">
+                    {{ solicitud.nombre|default:"Sin nombre registrado" }}
+                </p>
+            </div>
+
+            <div class="form-field">
+                <label>Correo electrónico</label>
+                <p class="form-control-plaintext">
+                    {{ solicitud.email }}
+                </p>
+            </div>
+
+            <div class="form-field">
+                <label>Comuna</label>
+                <p class="form-control-plaintext">
+                    {{ solicitud.comuna|default:"Sin comuna registrada" }}
+                </p>
+            </div>
+
+            <div class="form-field">
+                <label>Rol</label>
+                <p class="form-control-plaintext">
+                    {% if usuario_editado.is_staff %}
+                        Administrador
+                    {% else %}
+                        Monitor
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="form-field">
+                <label>Estado de la cuenta</label>
+                <p class="form-control-plaintext">
+                    {% if usuario_editado.is_active %}
+                        <span class="status-pill success">Activa</span>
+                    {% else %}
+                        <span class="status-pill danger">Inactiva / bloqueada</span>
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="form-field">
+                <label>Fecha de registro</label>
+                <p class="form-control-plaintext">
+                    {{ solicitud.fecha_creacion|date:'d/m/Y'|default:"No disponible" }}
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+</section>
+
+
+<!-- HISTORIAL DE BLOQUEOS -->
+<section class="admin-card mb-4">
+
+    <div class="admin-card-head admin-card-head--split">
+        <div>
+            <h2>Historial de bloqueos</h2>
+            <p>Registro de bloqueos aplicados a esta cuenta.</p>
+        </div>
+
+        <span class="block-history-count">
+            {{ historial_bloqueos|length }}
+        </span>
+    </div>
+
+    <div class="admin-card-body">
+
+        {% if historial_bloqueos %}
+
+            <div class="block-history-scroll"
+                 tabindex="0"
+                 role="region"
+                 aria-label="Historial de bloqueos">
+
+                {% for bloqueo in historial_bloqueos %}
+
+                    <div class="block-history-entry">
+
+                        <button
+                            type="button"
+                            class="block-history-trigger"
+                            onclick="document.getElementById('bloqueo-{{ bloqueo.pk }}').showModal()"
+                            aria-haspopup="dialog"
+                            aria-controls="bloqueo-{{ bloqueo.pk }}"
+                        >
+
+                            <span class="block-history-label">
+                                Bloqueo ·
+                                <time datetime="{{ bloqueo.fecha_bloqueo|date:'c' }}">
+                                    {{ bloqueo.fecha_bloqueo|date:"d/m/Y H:i" }}
+                                </time>
+                            </span>
+
+                            <span class="permission-icon admin block-history-search">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                                <span class="visually-hidden">Ver motivo</span>
+                            </span>
+
+                        </button>
+
+                        <dialog
+                            class="block-history-dialog"
+                            id="bloqueo-{{ bloqueo.pk }}"
+                            aria-label="Motivo del bloqueo"
+                        >
+
+                            <form method="dialog">
+                                <button
+                                    class="btn-close"
+                                    aria-label="Cerrar"
+                                    type="submit">
+                                </button>
+                            </form>
+
+                            <h2>Detalle del bloqueo</h2>
+
+                            <div class="block-history-reason">
+
+                                <small>
+                                    {{ bloqueo.fecha_bloqueo|date:"j F Y, H:i" }} h
+                                </small>
+
+                                <p><strong>Motivo</strong></p>
+
+                                <p>
+                                    {{ bloqueo.motivo|default:"Sin motivo registrado."|linebreaksbr }}
+                                </p>
+
+                            </div>
+
+                        </dialog>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <p class="block-history-empty">
+                <i class="bi bi-shield-check" aria-hidden="true"></i>
+                Esta cuenta no registra bloqueos.
+            </p>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+<!-- HISTORIAL DE MEDICIONES -->
+<section class="admin-card" id="mediciones" data-tabla-expandible>
+
+    <div class="admin-card-head admin-card-head--split">
+
+        <div>
+            <h2>Historial de mediciones</h2>
+
+            <p>
+                Registros enviados por este usuario, ordenados desde el más reciente.
+            </p>
+
+            <p>
+                Mostrando
+                <span data-cantidad-visible>
+                    {{ mediciones|slice:":10"|length }}
+                </span>
+                de {{ total_mediciones }} mediciones.
+            </p>
+        </div>
+
+        <span class="block-history-count">
+            {{ total_mediciones }}
+        </span>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table admin-table align-middle mb-0">
+
+            <thead>
+                <tr>
+                    <th>Ubicación y fecha</th>
+                    <th>pH</th>
+                    <th>Conductividad</th>
+                    <th>TDS</th>
+                    <th>Temperatura</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+
+            <tbody id="filas-mediciones">
+
+                {% for medicion in mediciones %}
+
+                    <tr {% if forloop.counter > 10 %}data-fila-extra hidden{% endif %}>
+
+                        <td>
+                            <strong>
+                                <i class="bi bi-geo-alt"></i>
+                                {{ medicion.ubicacion }}
+                            </strong>
+
+                            <small class="d-block">
+                                {{ medicion.fecha_registro|date:'d/m/Y H:i' }}
+                            </small>
+                        </td>
+
+                        <td>{{ medicion.ph }}</td>
+
+                        <td>
+                            {{ medicion.conductividad }} mS/cm
+                        </td>
+
+                        <td>
+                            {{ medicion.tds }} ppm
+                        </td>
+
+                        <td>
+                            {{ medicion.temperatura }} °C
+                        </td>
+
+                        <td>
+                            <span class="status-pill
+                                {% if medicion.alerta_general == 'Verde' %}
+                                    success
+                                {% elif medicion.alerta_general == 'Amarillo' %}
+                                    warning
+                                {% else %}
+                                    danger
+                                {% endif %}">
+                                {{ medicion.alerta_general }}
+                            </span>
+                        </td>
+
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+                        <td colspan="6">
+
+                            <div class="admin-empty">
+                                <i class="bi bi-droplet"></i>
+
+                                <strong>
+                                    Este usuario todavía no registra mediciones.
+                                </strong>
+
+                                <span>
+                                    Sus futuros registros aparecerán aquí.
+                                </span>
+                            </div>
+
+                        </td>
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    {% if total_mediciones > 10 %}
+
+        <div class="p-3 text-center border-top">
+
+            <button
+                type="button"
+                class="btn btn-admin-primary"
+                data-expandir-tabla
+                data-tipo="mediciones"
+                aria-expanded="false"
+                aria-controls="filas-mediciones"
+            >
+                Ver más mediciones
+            </button>
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script src="{% static 'js/tablas_expandibles.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,228 @@
+
+{% extends 'base.html' %}
+{% load static %}
+{% load paginacion_tags %}
+{% block title %}AquaCivis - Mi historial de mediciones{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+{% endblock %}
+
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h2 fw-bold mb-1"><i class="bi bi-clock-history text-primary me-2" aria-hidden="true"></i>Mi historial de mediciones</h1>
+            <p class="text-secondary mb-0">Consulta y filtra las mediciones que has registrado en AquaCivis.</p>
+        </div>
+        <a href="{% url 'medicion' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1" aria-hidden="true"></i> Nueva medición
+        </a>
+    </div>
+
+    <section class="card border-0 shadow-sm rounded-4 mb-4" aria-labelledby="titulo-filtros">
+        
+<div class="card-body p-3 p-md-4">
+
+    <!-- Botón desplegable para móviles -->
+    <button
+        type="button"
+        class="btn btn-outline-primary w-100 d-md-none d-flex align-items-center gap-2 mb-3"
+        data-bs-toggle="collapse"
+        data-bs-target="#panelFiltrosHistorial"
+        aria-expanded="false"
+        aria-controls="panelFiltrosHistorial">
+
+        <i class="bi bi-funnel"></i>
+        Filtros
+
+        <i class="bi bi-chevron-down ms-auto"></i>
+    </button>
+
+    <!-- Panel de filtros -->
+    <div class="collapse d-md-block" id="panelFiltrosHistorial">
+
+        <h2 id="titulo-filtros" class="h5 fw-bold mb-3 d-none d-md-block">
+            <i class="bi bi-funnel me-2" aria-hidden="true"></i>
+            Filtros
+        </h2>
+
+        {% if errores %}
+            <div class="alert alert-danger" role="alert">
+                <strong>Revisa los filtros:</strong>
+                <ul class="mb-0 mt-1">
+                    {% for error in errores %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <form id="form-filtros-mediciones"
+              method="get"
+              action="{% url 'historial_mediciones' %}"
+              class="row g-3"
+              data-loading-message="Aplicando filtros...">
+
+            <div class="col-md-6 col-lg-4">
+                <label class="form-label fw-semibold" for="parametro">Parámetro</label>
+                <select class="form-select" id="parametro" name="parametro">
+                    <option value="">Todos los parámetros</option>
+                    {% for codigo, etiqueta in parametros.items %}
+                        <option value="{{ codigo }}" {% if filtros.parametro == codigo %}selected{% endif %}>
+                            {{ etiqueta }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <label class="form-label fw-semibold" for="minimo">Valor mínimo</label>
+                <input class="form-control" id="minimo" name="minimo"
+                       type="number" step="any"
+                       value="{{ filtros.minimo }}" placeholder="Opcional">
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <label class="form-label fw-semibold" for="maximo">Valor máximo</label>
+                <input class="form-control" id="maximo" name="maximo"
+                       type="number" step="any"
+                       value="{{ filtros.maximo }}" placeholder="Opcional">
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <label class="form-label fw-semibold" for="alerta">Alerta general</label>
+                <select class="form-select" id="alerta" name="alerta">
+                    <option value="">Todos los niveles</option>
+                    {% for codigo, etiqueta in alertas_disponibles.items %}
+                        <option value="{{ codigo }}" {% if filtros.alerta == codigo %}selected{% endif %}>
+                            {{ etiqueta }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <label class="form-label fw-semibold" for="desde">Desde</label>
+                <input class="form-control" id="desde" name="desde"
+                       type="text" value="{{ filtros.desde }}"
+                       placeholder="Selecciona una fecha"
+                       data-min="{{ rango.minima|date:'Y-m-d' }}"
+                       data-max="{{ rango.hoy|date:'Y-m-d' }}"
+                       data-selector-fecha="desde">
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <label class="form-label fw-semibold" for="hasta">Hasta</label>
+                <input class="form-control" id="hasta" name="hasta"
+                       type="text" value="{{ filtros.hasta }}"
+                       placeholder="Selecciona una fecha"
+                       data-min="{{ rango.minima|date:'Y-m-d' }}"
+                       data-max="{{ rango.hoy|date:'Y-m-d' }}"
+                       data-selector-fecha="hasta">
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <label class="form-label fw-semibold" for="bloque-horario">
+                    Bloque horario
+                </label>
+
+                <select class="form-select" id="bloque-horario" name="bloque_horario">
+                    <option value="">Todos los horarios</option>
+                    <option value="Mañana" {% if filtros.bloque_horario == "Mañana" %}selected{% endif %}>
+                        Mañana (08:00 - 12:00)
+                    </option>
+                    <option value="Día" {% if filtros.bloque_horario == "Día" %}selected{% endif %}>
+                        Día (12:00 - 16:00)
+                    </option>
+                    <option value="Noche" {% if filtros.bloque_horario == "Noche" %}selected{% endif %}>
+                        Noche (16:00 - 20:00)
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-12 d-flex flex-wrap gap-2 align-items-end">
+                <button type="submit" id="aplicar-filtros" class="btn btn-primary">
+                    <i class="bi bi-search me-1" aria-hidden="true"></i>
+                    Aplicar filtros
+                </button>
+
+                <a href="{% url 'historial_mediciones' %}"
+                   id="limpiar-filtros"
+                   class="btn btn-outline-secondary">
+                    Limpiar filtros
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+    </section>
+
+    <section class="card border-0 shadow-sm rounded-4" aria-labelledby="titulo-resultados">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <h2 id="titulo-resultados" class="h5 fw-bold mb-0">Mediciones registradas</h2>
+                <span class="text-secondary" role="status">{{ total_registros }} registro{{ total_registros|pluralize }}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <caption class="visually-hidden">Historial de tus mediciones, ordenadas desde la más reciente</caption>
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Fecha y hora</th>
+                            <th scope="col">Ubicación</th>
+                            <th scope="col">pH</th>
+                            <th scope="col">CE (mS/cm)</th>
+                            <th scope="col">TDS (ppm)</th>
+                            <th scope="col">Temp. (°C)</th>
+                            <th scope="col">Alerta general</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for medicion in pagina %}
+                        <tr>
+                            <td class="text-nowrap">{{ medicion.fecha_registro|date:"d/m/Y H:i" }}</td>
+                            <td>{{ medicion.ubicacion }}</td>
+                            <td>{{ medicion.ph|floatformat:2 }}</td>
+                            <td>{{ medicion.conductividad|floatformat:2 }}</td>
+                            <td>{{ medicion.tds|floatformat:2 }}</td>
+                            <td>{{ medicion.temperatura|floatformat:2 }}</td>
+                            <td>
+                                {% if medicion.alerta_general == 'Verde' %}
+                                    <span class="badge bg-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Riesgo bajo</span>
+                                {% elif medicion.alerta_general == 'Amarillo' %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>Riesgo medio</span>
+                                {% elif medicion.alerta_general == 'Rojo' %}
+                                    <span class="badge bg-danger"><i class="bi bi-exclamation-octagon me-1" aria-hidden="true"></i>Riesgo alto</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ medicion.alerta_general|default:'Sin clasificar' }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-secondary">
+                                <i class="bi bi-inbox fs-1 d-block mb-2" aria-hidden="true"></i>
+                                No se encontraron mediciones para estos filtros.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-3">
+                {% paginacion pagina ancla='#titulo-resultados' %}
+            </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/es.js"></script>
+<script src="{% static 'js/selector_fechas.js' %}"></script>
+<script src="{% static 'js/filtros_historial_mediciones.js' %}"></script>
+{% endblock %}

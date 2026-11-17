@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin_panel.css' %}?v={{ STATIC_VERSION }}">
+
+{% endblock %}
+
+{% block extra_js %}
+{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+    <aside class="admin-sidebar d-none d-lg-flex">
+        {% include 'admin_panel/partials/menu.html' %}
+    </aside>
+
+    <section class="admin-content">
+        <div class="admin-mobile-bar d-lg-none">
+            <div>
+                <strong>Panel administrativo</strong>
+                <small>AquaCivis</small>
+            </div>
+            <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminMenu" aria-controls="adminMenu">
+                <i class="bi bi-list"></i> Menú
+            </button>
+        </div>
+
+        <div class="admin-page-head">
+            <div>
+                <p class="admin-eyebrow">Panel AquaCivis</p>
+                <h1>{% block admin_title %}Administración{% endblock %}</h1>
+                <p>{% block admin_subtitle %}{% endblock %}</p>
+            </div>
+            {% block admin_actions %}{% endblock %}
+        </div>
+
+        {% block admin_content %}{% endblock %}
+    </section>
+</div>
+
+<div class="offcanvas offcanvas-start admin-offcanvas" tabindex="-1" id="adminMenu" aria-labelledby="adminMenuLabel">
+    <div class="offcanvas-header">
+        <h2 class="offcanvas-title h5" id="adminMenuLabel">Panel administrativo</h2>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        {% include 'admin_panel/partials/menu.html' %}
+    </div>
+</div>
+{% endblock %}
+
